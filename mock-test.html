@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>mock-test</title>
+    <script>
+      // --- Diagnostics ---
+      window.__diag = { calls: {}, errors: [], renders: 0 };
+      function bump(k) { window.__diag.calls[k] = (window.__diag.calls[k] || 0) + 1; }
+      window.addEventListener("error", (e) =>
+        window.__diag.errors.push("error: " + (e.message || e.error)));
+      window.addEventListener("unhandledrejection", (e) =>
+        window.__diag.errors.push("rejection: " + (e.reason && (e.reason.message || e.reason))));
+      const origErr = console.error.bind(console);
+      console.error = (...a) => { window.__diag.errors.push("console.error: " + a.map(String).join(" ")); origErr(...a); };
+
+      // --- Minimal Tauri SQL bridge mock ---
+      // plugin-sql's Database.load => invoke('plugin:sql|load') returns the db path string.
+      // select => invoke('plugin:sql|select') returns rows; execute => [rowsAffected, lastInsertId].
+      const mockRows = (q) => {
+        return []; // empty tables, like the user's fresh DB
+      };
+      window.__TAURI_INTERNALS__ = {
+        transformCallback: (cb) => cb,
+        invoke: async (cmd, args) => {
+          bump(cmd);
+          if (cmd === "plugin:sql|load") return "sqlite:app.db";
+          if (cmd === "plugin:sql|select") return mockRows(args && args.query);
+          if (cmd === "plugin:sql|execute") return [0, 0];
+          if (cmd === "plugin:sql|close") return true;
+          return null;
+        },
+      };
+      window.__TAURI_OS_PLUGIN_INTERNALS__ = { platform: "linux" };
+    </script>
+  </head>
+  <body>
+    <pre id="diag" style="position:fixed;bottom:0;left:0;z-index:99999;background:#fff;color:#000;font-size:10px;max-height:40vh;overflow:auto"></pre>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <script>
+      setInterval(() => {
+        const el = document.getElementById("diag");
+        if (el) el.textContent = JSON.stringify(window.__diag, null, 1);
+      }, 500);
+    </script>
+  </body>
+</html>
