@@ -2,13 +2,12 @@ import Database from "@tauri-apps/plugin-sql";
 
 let db: Database | null = null;
 
-/**
- * Returns a lazily-initialized connection to the bundled SQLite database.
- * Migrations are defined in `src-tauri/src/lib.rs` and run automatically on load.
- */
 export async function getDb(): Promise<Database> {
   if (!db) {
     db = await Database.load("sqlite:app.db");
+    await db.execute("PRAGMA journal_mode = WAL");
+    await db.execute("PRAGMA busy_timeout = 5000");
+    await db.execute("PRAGMA foreign_keys = ON");
   }
   return db;
 }
