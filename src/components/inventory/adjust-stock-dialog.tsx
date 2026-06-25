@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Dialog,
   DialogContent,
@@ -40,6 +41,7 @@ export function AdjustStockDialog({
   productId,
   variant,
 }: Props) {
+  const { t } = useTranslation();
   const adjust = useAdjustStock(productId);
   const [mode, setMode] = useState<Mode>("add");
   const [qty, setQty] = useState("");
@@ -70,16 +72,16 @@ export function AdjustStockDialog({
 
   async function handleApply() {
     if (!valid) {
-      toast.error("Enter a valid quantity");
+      toast.error(t("inventory.adjustStock.invalidQty"));
       return;
     }
     if (delta === 0) {
-      toast.message("No change to apply");
+      toast.message(t("inventory.adjustStock.noChange"));
       onOpenChange(false);
       return;
     }
     if (resultStock < 0) {
-      toast.error("Stock cannot go below zero");
+      toast.error(t("inventory.adjustStock.belowZero"));
       return;
     }
     try {
@@ -89,10 +91,10 @@ export function AdjustStockDialog({
         reason: REASON[mode],
         note: note.trim() || null,
       });
-      toast.success("Stock updated");
+      toast.success(t("inventory.adjustStock.updated"));
       onOpenChange(false);
     } catch (err) {
-      toast.error(`Could not adjust stock: ${String(err)}`);
+      toast.error(t("inventory.adjustStock.couldNotAdjust", { error: String(err) }));
     }
   }
 
@@ -102,10 +104,10 @@ export function AdjustStockDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Adjust stock</DialogTitle>
+          <DialogTitle>{t("inventory.adjustStock.title")}</DialogTitle>
           <DialogDescription>
             {variant.product_name}
-            {label ? ` — ${label}` : ""} · on hand: {variant.stock}
+            {label ? ` — ${label}` : ""} · {t("inventory.adjustStock.onHand", { count: variant.stock })}
           </DialogDescription>
         </DialogHeader>
 
@@ -116,14 +118,14 @@ export function AdjustStockDialog({
             onValueChange={(v) => v && setMode(v as Mode)}
             className="justify-start"
           >
-            <ToggleGroupItem value="add">Receive</ToggleGroupItem>
-            <ToggleGroupItem value="remove">Remove</ToggleGroupItem>
-            <ToggleGroupItem value="set">Set count</ToggleGroupItem>
+            <ToggleGroupItem value="add">{t("inventory.adjustStock.receive")}</ToggleGroupItem>
+            <ToggleGroupItem value="remove">{t("common.remove")}</ToggleGroupItem>
+            <ToggleGroupItem value="set">{t("inventory.adjustStock.setCount")}</ToggleGroupItem>
           </ToggleGroup>
 
           <div className="grid gap-2">
             <Label htmlFor="qty">
-              {mode === "set" ? "Counted quantity" : "Quantity"}
+              {mode === "set" ? t("inventory.adjustStock.countedQty") : t("common.quantity")}
             </Label>
             <Input
               id="qty"
@@ -135,18 +137,18 @@ export function AdjustStockDialog({
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="note">Note (optional)</Label>
+            <Label htmlFor="note">{t("inventory.adjustStock.noteOptional")}</Label>
             <Input
               id="note"
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="e.g. supplier delivery #123"
+              placeholder={t("inventory.adjustStock.notePlaceholder")}
             />
           </div>
 
           {valid && (
             <p className="text-muted-foreground text-sm">
-              New on-hand: <span className="text-foreground font-medium">{resultStock}</span>{" "}
+              {t("inventory.adjustStock.newOnHand")}: <span className="text-foreground font-medium">{resultStock}</span>{" "}
               ({delta >= 0 ? "+" : ""}
               {delta})
             </p>
@@ -155,10 +157,10 @@ export function AdjustStockDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button onClick={handleApply} disabled={adjust.isPending || !valid}>
-            Apply
+            {t("common.apply")}
           </Button>
         </DialogFooter>
       </DialogContent>

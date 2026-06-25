@@ -77,9 +77,9 @@ export const QuickActions = memo(
                   className={`h-12 w-full justify-start hover:bg-${action.color}-500/10 hover:border-${action.color}-500/50 transition-all duration-200`}
                   onClick={() => handleAction(action.action)}
                 >
-                  <Icon className={`mr-3 h-5 w-5 text-${action.color}-500`} />
+                  <Icon className={`me-3 h-5 w-5 text-${action.color}-500`} />
                   <span className="font-medium">{action.label}</span>
-                  <div className="text-muted-foreground ml-auto text-xs">
+                  <div className="text-muted-foreground ms-auto text-xs">
                     {action.shortcut}
                   </div>
                 </Button>

@@ -28,7 +28,7 @@ export const RevenueChart = memo(() => {
           </p>
         </div>
         <Button variant="outline" size="sm">
-          <Calendar className="mr-2 h-4 w-4" />
+          <Calendar className="me-2 h-4 w-4" />
           Last 6 months
         </Button>
       </div>

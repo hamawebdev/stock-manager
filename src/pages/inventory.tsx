@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   Table,
   TableBody,
@@ -28,6 +29,8 @@ import {
   FileSpreadsheet,
   Archive,
   ImageIcon,
+  Tags,
+  Barcode,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -41,8 +44,10 @@ import type { ProductSummary } from "@/lib/pos/catalog";
 import { formatMoney } from "@/lib/money";
 import { productImageSrc } from "@/lib/images";
 import { ProductDetailSheet } from "@/components/inventory/product-detail-sheet";
+import { LabelDesignerDialog } from "@/components/inventory/label-designer/label-designer-dialog";
 
 export default function InventoryPage() {
+  const { t } = useTranslation();
   const products = useProducts();
   const currency = useCurrency();
   const navigate = useNavigate();
@@ -54,6 +59,7 @@ export default function InventoryPage() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [checked, setChecked] = useState<Set<number>>(new Set());
   const [bulkCategory, setBulkCategory] = useState<string>("");
+  const [designerOpen, setDesignerOpen] = useState(false);
 
   const filtered = useMemo(() => {
     const list = products.data ?? [];
@@ -92,23 +98,23 @@ export default function InventoryPage() {
     const categoryId = bulkCategory === "none" ? null : Number(bulkCategory);
     try {
       await assignCategory.mutateAsync({ ids, categoryId });
-      toast.success(`Updated ${ids.length} products`);
+      toast.success(t("inventory.updatedProducts", { count: ids.length }));
       setChecked(new Set());
       setBulkCategory("");
     } catch (e) {
-      toast.error(`Could not assign category: ${String(e)}`);
+      toast.error(t("inventory.couldNotAssign", { error: String(e) }));
     }
   }
 
   async function archiveSelected() {
     const ids = [...checked];
-    if (!window.confirm(`Archive ${ids.length} products?`)) return;
+    if (!window.confirm(t("inventory.archiveConfirm", { count: ids.length }))) return;
     try {
       await archiveMany.mutateAsync(ids);
-      toast.success(`Archived ${ids.length} products`);
+      toast.success(t("inventory.archivedProducts", { count: ids.length }));
       setChecked(new Set());
     } catch (e) {
-      toast.error(`Could not archive: ${String(e)}`);
+      toast.error(t("inventory.couldNotArchive", { error: String(e) }));
     }
   }
 
@@ -116,32 +122,33 @@ export default function InventoryPage() {
     <div className="mx-auto max-w-6xl space-y-4 p-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Inventory</h1>
-          <p className="text-muted-foreground text-sm">
-            Products and their size/color variants.
-          </p>
+          <h1 className="text-2xl font-bold tracking-tight">{t("inventory.title")}</h1>
+          <p className="text-muted-foreground text-sm">{t("inventory.subtitle")}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" onClick={() => navigate("/inventory/best-sellers")}>
-            <TrendingUp /> Best sellers
+            <TrendingUp /> {t("inventory.bestSellers")}
           </Button>
           <Button variant="outline" onClick={() => navigate("/inventory/intelligence")}>
-            <Brain /> Insights
+            <Brain /> {t("inventory.insights")}
           </Button>
           <Button variant="outline" onClick={() => navigate("/inventory/import")}>
-            <FileSpreadsheet /> Import
+            <FileSpreadsheet /> {t("common.import")}
+          </Button>
+          <Button variant="outline" onClick={() => setDesignerOpen(true)}>
+            <Tags /> {t("labelDesigner.launch")}
           </Button>
           <Button onClick={() => navigate("/inventory/new")}>
-            <Plus /> Create product
+            <Plus /> {t("inventory.createProduct")}
           </Button>
         </div>
       </div>
 
       <div className="relative max-w-sm">
-        <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+        <Search className="text-muted-foreground absolute top-1/2 start-3 size-4 -translate-y-1/2" />
         <Input
-          className="pl-9"
-          placeholder="Search products…"
+          className="ps-9"
+          placeholder={t("inventory.searchPlaceholder")}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
@@ -150,14 +157,14 @@ export default function InventoryPage() {
       {/* Bulk action bar */}
       {checked.size > 0 && (
         <div className="bg-accent/50 flex flex-wrap items-center gap-2 rounded-lg border px-3 py-2">
-          <span className="text-sm font-medium">{checked.size} selected</span>
+          <span className="text-sm font-medium">{t("inventory.selectedCount", { count: checked.size })}</span>
           <div className="flex items-center gap-2">
             <Select value={bulkCategory} onValueChange={setBulkCategory}>
               <SelectTrigger className="h-8 w-44">
-                <SelectValue placeholder="Assign category…" />
+                <SelectValue placeholder={t("inventory.assignCategoryPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">Uncategorized</SelectItem>
+                <SelectItem value="none">{t("inventory.uncategorized")}</SelectItem>
                 {categories.data?.map((c) => (
                   <SelectItem key={c.id} value={String(c.id)}>
                     {c.name}
@@ -171,14 +178,17 @@ export default function InventoryPage() {
               disabled={!bulkCategory || assignCategory.isPending}
               onClick={applyCategory}
             >
-              Assign
+              {t("inventory.assign")}
             </Button>
           </div>
+          <Button size="sm" variant="outline" onClick={() => setDesignerOpen(true)}>
+            <Barcode /> {t("inventory.printBarcodes")}
+          </Button>
           <Button size="sm" variant="outline" onClick={archiveSelected}>
-            <Archive /> Archive
+            <Archive /> {t("inventory.archive")}
           </Button>
           <Button size="sm" variant="ghost" onClick={() => setChecked(new Set())}>
-            Clear
+            {t("common.clear")}
           </Button>
         </div>
       )}
@@ -191,15 +201,15 @@ export default function InventoryPage() {
                 <Checkbox
                   checked={allChecked}
                   onCheckedChange={toggleAll}
-                  aria-label="Select all"
+                  aria-label={t("inventory.selectAll")}
                 />
               </TableHead>
-              <TableHead>Product</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Brand</TableHead>
-              <TableHead className="text-right">Variants</TableHead>
-              <TableHead className="text-right">On hand</TableHead>
-              <TableHead className="text-right">Price</TableHead>
+              <TableHead>{t("inventory.colProduct")}</TableHead>
+              <TableHead>{t("inventory.colCategory")}</TableHead>
+              <TableHead>{t("inventory.colBrand")}</TableHead>
+              <TableHead className="text-end">{t("inventory.colVariants")}</TableHead>
+              <TableHead className="text-end">{t("inventory.colOnHand")}</TableHead>
+              <TableHead className="text-end">{t("common.price")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -214,7 +224,7 @@ export default function InventoryPage() {
                   <Checkbox
                     checked={checked.has(p.id)}
                     onCheckedChange={() => toggle(p.id)}
-                    aria-label={`Select ${p.name}`}
+                    aria-label={t("inventory.selectProduct", { name: p.name })}
                   />
                 </TableCell>
                 <TableCell>
@@ -229,13 +239,13 @@ export default function InventoryPage() {
                 <TableCell className="text-muted-foreground">
                   {p.brand ?? "—"}
                 </TableCell>
-                <TableCell className="text-right">{p.variant_count}</TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-end">{p.variant_count}</TableCell>
+                <TableCell className="text-end">
                   <Badge variant={p.total_stock <= 0 ? "destructive" : "secondary"}>
                     {p.total_stock}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-end">
                   {formatMoney(p.price_cents, currency)}
                 </TableCell>
               </TableRow>
@@ -246,10 +256,10 @@ export default function InventoryPage() {
                   <Package className="text-muted-foreground mx-auto mb-2 size-8" />
                   <p className="text-muted-foreground text-sm">
                     {products.isLoading
-                      ? "Loading…"
+                      ? t("common.loading")
                       : query
-                        ? "No products match your search."
-                        : "No products yet. Create your first one."}
+                        ? t("inventory.noMatch")
+                        : t("inventory.empty")}
                   </p>
                 </TableCell>
               </TableRow>
@@ -262,6 +272,12 @@ export default function InventoryPage() {
         product={selected}
         onOpenChange={(o) => !o && setSelectedId(null)}
         onEditProduct={openEdit}
+      />
+
+      <LabelDesignerDialog
+        open={designerOpen}
+        onOpenChange={setDesignerOpen}
+        initialProductIds={[...checked]}
       />
     </div>
   );

@@ -9,6 +9,15 @@ const DEFAULTS: ShopSettings = {
   currency_decimals: 2,
   receipt_header: "",
   receipt_footer: "Thank you!",
+  shop_address: "",
+  shop_phone: "",
+  shop_email: "",
+  shop_logo: "",
+  shop_nif: "",
+  shop_nis: "",
+  shop_rc: "",
+  shop_art: "",
+  default_tva_rate: 19,
 };
 
 export async function getSettings(): Promise<ShopSettings> {
@@ -23,7 +32,26 @@ export async function getSettings(): Promise<ShopSettings> {
     currency_decimals: Number(map.get("currency_decimals") ?? DEFAULTS.currency_decimals),
     receipt_header: map.get("receipt_header") ?? DEFAULTS.receipt_header,
     receipt_footer: map.get("receipt_footer") ?? DEFAULTS.receipt_footer,
+    shop_address: map.get("shop_address") ?? DEFAULTS.shop_address,
+    shop_phone: map.get("shop_phone") ?? DEFAULTS.shop_phone,
+    shop_email: map.get("shop_email") ?? DEFAULTS.shop_email,
+    shop_logo: map.get("shop_logo") ?? DEFAULTS.shop_logo,
+    shop_nif: map.get("shop_nif") ?? DEFAULTS.shop_nif,
+    shop_nis: map.get("shop_nis") ?? DEFAULTS.shop_nis,
+    shop_rc: map.get("shop_rc") ?? DEFAULTS.shop_rc,
+    shop_art: map.get("shop_art") ?? DEFAULTS.shop_art,
+    default_tva_rate: Number(map.get("default_tva_rate") ?? DEFAULTS.default_tva_rate),
   };
+}
+
+/** Read a single raw setting value, or null when unset. */
+export async function getSetting(key: string): Promise<string | null> {
+  const db = await getDb();
+  const rows = await db.select<{ value: string | null }[]>(
+    "SELECT value FROM settings WHERE key = $1",
+    [key],
+  );
+  return rows[0]?.value ?? null;
 }
 
 export async function setSetting(key: string, value: string): Promise<void> {

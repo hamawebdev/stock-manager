@@ -6,15 +6,25 @@
  *   - disabled                     → no-op
  */
 import { invoke } from "@tauri-apps/api/core";
+import type { jsPDF } from "jspdf";
 import { getDb } from "./db";
 import { EscPosBuilder } from "./escpos";
+import i18n from "@/lib/i18n";
 import { formatMoney, type CurrencyConfig } from "@/lib/money";
+import type { LabelTemplate } from "./label-template";
+import {
+  labelDesignHtml,
+  labelDesignPdf,
+  labelDesignEscpos,
+  type LabelPrintItem,
+} from "./label-render";
 
 // --- Config ---------------------------------------------------------------
 
 export type PrinterMode = "escpos_usb" | "escpos_network" | "os" | "disabled";
 export type DrawerMode = "printer" | "usb" | "none";
-export type LabelMode = PrinterMode | "same_as_receipt";
+/** Label output target. `pdf` exports a file; the rest mirror PrinterMode. */
+export type LabelMode = PrinterMode | "same_as_receipt" | "pdf";
 
 export interface HardwareConfig {
   printer_mode: PrinterMode;
@@ -115,18 +125,18 @@ function buildReceiptBytes(d: ReceiptData, cols: number): Uint8Array {
   const m = (c: number) => formatMoney(c, d.currency);
   b.init().align("center").bold(true).size(1, 1).line(d.shop_name).size(0, 0).bold(false);
   if (d.header) b.line(d.header);
-  b.feed(1).align("left").line(`Receipt: ${d.code}`).line(d.datetime).rule();
+  b.feed(1).align("left").line(i18n.t("receipt.receiptCode", { code: d.code })).line(d.datetime).rule();
   for (const l of d.lines) {
     b.row(l.description, m(l.line_total_cents));
     if (l.qty > 1) b.line(`  ${l.qty} x ${m(l.unit_price_cents)}`);
   }
   b.rule();
   if (d.discount_cents > 0) {
-    b.row("Subtotal", m(d.subtotal_cents));
-    b.row("Discount", `-${m(d.discount_cents)}`);
+    b.row(i18n.t("receipt.subtotal"), m(d.subtotal_cents));
+    b.row(i18n.t("receipt.discount"), `-${m(d.discount_cents)}`);
   }
-  b.bold(true).row("TOTAL", m(d.total_cents)).bold(false);
-  b.row("Cash", m(d.tendered_cents)).row("Change", m(d.change_cents));
+  b.bold(true).row(i18n.t("receipt.total"), m(d.total_cents)).bold(false);
+  b.row(i18n.t("receipt.cash"), m(d.tendered_cents)).row(i18n.t("receipt.change"), m(d.change_cents));
   if (d.footer) b.feed(1).align("center").line(d.footer);
   b.cut();
   return b.build();
@@ -151,7 +161,7 @@ async function sendBytes(mode: PrinterMode, address: string, bytes: Uint8Array) 
 }
 
 /** Render arbitrary HTML through the system print dialog (OS mode). */
-function printHtml(html: string) {
+export function printHtml(html: string) {
   const iframe = document.createElement("iframe");
   iframe.style.position = "fixed";
   iframe.style.right = "0";
@@ -187,15 +197,15 @@ function receiptHtml(d: ReceiptData): string {
   </style></head><body>
     <h2>${esc(d.shop_name)}</h2>
     ${d.header ? `<div class="center">${esc(d.header)}</div>` : ""}
-    <div>Receipt: ${esc(d.code)}<br>${esc(d.datetime)}</div>
+    <div>${esc(i18n.t("receipt.receiptCode", { code: d.code }))}<br>${esc(d.datetime)}</div>
     <div class="rule"></div>
     <table>${rows}</table>
     <div class="rule"></div>
     <table>
-      ${d.discount_cents > 0 ? `<tr><td>Subtotal</td><td style="text-align:right">${m(d.subtotal_cents)}</td></tr><tr><td>Discount</td><td style="text-align:right">-${m(d.discount_cents)}</td></tr>` : ""}
-      <tr class="tot"><td>TOTAL</td><td style="text-align:right">${m(d.total_cents)}</td></tr>
-      <tr><td>Cash</td><td style="text-align:right">${m(d.tendered_cents)}</td></tr>
-      <tr><td>Change</td><td style="text-align:right">${m(d.change_cents)}</td></tr>
+      ${d.discount_cents > 0 ? `<tr><td>${esc(i18n.t("receipt.subtotal"))}</td><td style="text-align:right">${m(d.subtotal_cents)}</td></tr><tr><td>${esc(i18n.t("receipt.discount"))}</td><td style="text-align:right">-${m(d.discount_cents)}</td></tr>` : ""}
+      <tr class="tot"><td>${esc(i18n.t("receipt.total"))}</td><td style="text-align:right">${m(d.total_cents)}</td></tr>
+      <tr><td>${esc(i18n.t("receipt.cash"))}</td><td style="text-align:right">${m(d.tendered_cents)}</td></tr>
+      <tr><td>${esc(i18n.t("receipt.change"))}</td><td style="text-align:right">${m(d.change_cents)}</td></tr>
     </table>
     ${d.footer ? `<div class="rule"></div><div class="center">${esc(d.footer)}</div>` : ""}
   </body></html>`;
@@ -233,12 +243,66 @@ export async function printLabel(d: LabelData, cfg?: HardwareConfig) {
   const c = cfg ?? (await getHardwareConfig());
   const mode = c.label_mode === "same_as_receipt" ? c.printer_mode : c.label_mode;
   const address = c.label_mode === "same_as_receipt" ? c.printer_address : c.label_address;
-  if (mode === "disabled") return;
+  if (mode === "disabled" || mode === "pdf") return;
   if (mode === "os") {
     printHtml(labelHtml(d, c));
     return;
   }
   await sendBytes(mode, address, buildLabelBytes(d));
+}
+
+function isTauri(): boolean {
+  return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+}
+
+/** Save a jsPDF doc via the native save dialog, or download it under `npm run dev`. */
+async function saveLabelPdf(doc: jsPDF): Promise<void> {
+  const bytes = new Uint8Array(doc.output("arraybuffer"));
+  const name = `labels-${Date.now()}.pdf`;
+  if (isTauri()) {
+    const { save } = await import("@tauri-apps/plugin-dialog");
+    const path = await save({
+      defaultPath: name,
+      filters: [{ name: "PDF", extensions: ["pdf"] }],
+    });
+    if (!path) return;
+    await invoke("write_bytes", { path, data: Array.from(bytes) });
+    return;
+  }
+  const blob = new Blob([bytes as BlobPart], { type: "application/pdf" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Print a designed label template for a set of variants. The output method
+ * follows the configured `label_mode`: `os` renders the faithful HTML through
+ * the system print dialog, `pdf` exports a file, ESC/POS modes send a
+ * best-effort stacked label, `disabled` is a no-op.
+ */
+export async function printLabelDesign(
+  template: LabelTemplate,
+  items: LabelPrintItem[],
+  currency: CurrencyConfig,
+  cfg?: HardwareConfig,
+) {
+  const c = cfg ?? (await getHardwareConfig());
+  const mode = c.label_mode === "same_as_receipt" ? c.printer_mode : c.label_mode;
+  const address = c.label_mode === "same_as_receipt" ? c.printer_address : c.label_address;
+  if (mode === "disabled") return;
+  if (mode === "pdf") {
+    await saveLabelPdf(labelDesignPdf(template, items, currency));
+    return;
+  }
+  if (mode === "os") {
+    printHtml(labelDesignHtml(template, items, currency));
+    return;
+  }
+  await sendBytes(mode, address, labelDesignEscpos(template, items, currency));
 }
 
 function labelHtml(d: LabelData, c: HardwareConfig): string {

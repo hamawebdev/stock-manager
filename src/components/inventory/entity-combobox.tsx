@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Check, ChevronsUpDown, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -47,13 +48,17 @@ export function EntityCombobox({
   value,
   onChange,
   onCreate,
-  placeholder = "Select…",
-  searchPlaceholder = "Search…",
-  noun = "item",
+  placeholder,
+  searchPlaceholder,
+  noun,
   disabled,
   id,
   className,
 }: Props) {
+  const { t } = useTranslation();
+  const resolvedPlaceholder = placeholder ?? t("common.select") + "…";
+  const resolvedSearch = searchPlaceholder ?? t("common.search") + "…";
+  const resolvedNoun = noun ?? t("inventory.form.nounItem");
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [creating, setCreating] = useState(false);
@@ -96,21 +101,21 @@ export function EntityCombobox({
             className="flex-1 justify-between font-normal"
           >
             <span className={cn(!selected && "text-muted-foreground", "truncate")}>
-              {selected ? selected.label : placeholder}
+              {selected ? selected.label : resolvedPlaceholder}
             </span>
-            <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+            <ChevronsUpDown className="ms-2 size-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
           <Command shouldFilter={false}>
             <CommandInput
-              placeholder={searchPlaceholder}
+              placeholder={resolvedSearch}
               value={query}
               onValueChange={setQuery}
             />
             <CommandList>
               {filtered.length === 0 && !onCreate && (
-                <CommandEmpty>No results.</CommandEmpty>
+                <CommandEmpty>{t("common.noResults")}</CommandEmpty>
               )}
               <CommandGroup>
                 {filtered.map((item) => (
@@ -124,7 +129,7 @@ export function EntityCombobox({
                   >
                     <Check
                       className={cn(
-                        "mr-2 size-4",
+                        "me-2 size-4",
                         item.id === value ? "opacity-100" : "opacity-0",
                       )}
                     />
@@ -141,8 +146,8 @@ export function EntityCombobox({
                       onSelect={handleCreate}
                       disabled={creating}
                     >
-                      <Plus className="mr-2 size-4" />
-                      Create {noun} “{q}”
+                      <Plus className="me-2 size-4" />
+                      {t("inventory.form.createNoun", { noun: resolvedNoun, value: q })}
                     </CommandItem>
                   </CommandGroup>
                 </>
@@ -159,8 +164,8 @@ export function EntityCombobox({
           size="icon"
           disabled={disabled}
           onClick={openForCreate}
-          title={`Add ${noun}`}
-          aria-label={`Add ${noun}`}
+          title={t("inventory.form.addNoun", { noun: resolvedNoun })}
+          aria-label={t("inventory.form.addNoun", { noun: resolvedNoun })}
         >
           <Plus className="size-4" />
         </Button>

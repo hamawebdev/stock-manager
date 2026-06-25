@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import JsBarcode from "jsbarcode";
 import { cn } from "@/lib/utils";
 import { isValidEan13, type BarcodeSymbology } from "@/lib/pos/barcode";
@@ -21,6 +22,7 @@ export function BarcodePreview({
   height = 50,
   className,
 }: Props) {
+  const { t } = useTranslation();
   const ref = useRef<SVGSVGElement | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,7 +33,7 @@ export function BarcodePreview({
       return;
     }
     if (symbology === "ean13" && !isValidEan13(value)) {
-      setError("Not a valid EAN-13 (needs 13 digits incl. check digit)");
+      setError(t("inventory.barcodePreview.invalidEan13"));
       return;
     }
     try {
@@ -48,12 +50,12 @@ export function BarcodePreview({
     } catch (e) {
       setError(String(e));
     }
-  }, [value, symbology, height]);
+  }, [value, symbology, height, t]);
 
   if (!value) {
     return (
       <div className={cn("text-muted-foreground text-xs italic", className)}>
-        No barcode yet
+        {t("inventory.barcodePreview.noBarcode")}
       </div>
     );
   }

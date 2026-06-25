@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useBlocker, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   ArrowLeft,
   Copy,
@@ -103,6 +104,7 @@ interface Props {
 }
 
 export function ProductForm({ mode, initial }: Props) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const currency = useCurrency();
   const qc = useQueryClient();
@@ -191,9 +193,9 @@ export function ProductForm({ mode, initial }: Props) {
       const draft = JSON.parse(raw) as FormData;
       if (draft.name || draft.rows?.length || draft.reference) {
         setForm({ ...blankForm(), ...draft });
-        toast.info("Draft restored", {
+        toast.info(t("inventory.form.draftRestored"), {
           action: {
-            label: "Discard",
+            label: t("inventory.form.discard"),
             onClick: () => {
               localStorage.removeItem(DRAFT_KEY);
               setForm(blankForm());
@@ -211,10 +213,10 @@ export function ProductForm({ mode, initial }: Props) {
   // --- Autosave draft (create only) ----------------------------------------
   useEffect(() => {
     if (mode !== "create" || !dirty) return;
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       localStorage.setItem(DRAFT_KEY, JSON.stringify(form));
     }, 600);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [form, dirty, mode]);
 
   // --- Load existing images (edit) -----------------------------------------
@@ -255,7 +257,7 @@ export function ProductForm({ mode, initial }: Props) {
   );
   useEffect(() => {
     if (blocker.state !== "blocked") return;
-    if (window.confirm("You have unsaved changes. Leave this page anyway?")) {
+    if (window.confirm(t("inventory.form.unsavedConfirm"))) {
       blocker.proceed();
     } else {
       blocker.reset();
@@ -337,13 +339,13 @@ export function ProductForm({ mode, initial }: Props) {
   // --- Build + validate -----------------------------------------------------
   function buildInput(): ProductFormInput | null {
     if (!form.name.trim()) {
-      toast.error("Product name is required");
+      toast.error(t("inventory.form.nameRequired"));
       return null;
     }
     const cost = parseMoney(form.purchase || "0", currency.decimals);
     const price = parseMoney(form.selling || "0", currency.decimals);
     if (cost == null || price == null) {
-      toast.error("Purchase and selling prices must be valid amounts");
+      toast.error(t("inventory.form.invalidPrices"));
       return null;
     }
     const toInt = (s: string) => {
@@ -365,7 +367,7 @@ export function ProductForm({ mode, initial }: Props) {
       ];
     } else {
       if (form.rows.length === 0) {
-        toast.error("Add at least one variant, or switch to a simple product");
+        toast.error(t("inventory.form.addOneVariant"));
         return null;
       }
       variants = form.rows.map((r) => ({
@@ -408,18 +410,18 @@ export function ProductForm({ mode, initial }: Props) {
         productId = await createProduct.mutateAsync(input);
       }
       await persistImages(productId).catch((e) =>
-        toast.warning(`Saved, but some images failed: ${String(e)}`),
+        toast.warning(t("inventory.form.imagesFailed", { error: String(e) })),
       );
       localStorage.removeItem(DRAFT_KEY);
       setDirty(false);
-      toast.success(mode === "edit" ? "Product updated" : "Product created");
+      toast.success(mode === "edit" ? t("inventory.form.productUpdated") : t("inventory.form.productCreated"));
       if (thenNew) {
         resetForNew();
       } else {
         navigate("/inventory");
       }
     } catch (e) {
-      toast.error(`Could not save: ${String(e)}`);
+      toast.error(t("common.couldNotSave", { error: String(e) }));
     } finally {
       setSaving(false);
     }
@@ -458,20 +460,20 @@ export function ProductForm({ mode, initial }: Props) {
 
   async function printSimpleLabel() {
     if (!form.barcode.trim()) {
-      toast.error("Generate or enter a barcode first");
+      toast.error(t("inventory.form.generateBarcodeFirst"));
       return;
     }
     try {
       await printLabel({
-        title: form.name || "Product",
+        title: form.name || t("inventory.form.productFallback"),
         variant: "",
         barcode: form.barcode.trim(),
         price_cents: parseMoney(form.selling || "0", currency.decimals) ?? 0,
         currency,
       });
-      toast.success("Label sent to printer");
+      toast.success(t("inventory.labelSent"));
     } catch (e) {
-      toast.error(`Label print failed: ${String(e)}`);
+      toast.error(t("inventory.labelFailed", { error: String(e) }));
     }
   }
 
@@ -480,24 +482,24 @@ export function ProductForm({ mode, initial }: Props) {
     try {
       const newId = await duplicate.mutateAsync(initial.product.id);
       setDirty(false);
-      toast.success("Product duplicated");
+      toast.success(t("inventory.form.productDuplicated"));
       navigate(`/inventory/${newId}/edit`);
     } catch (e) {
-      toast.error(`Could not duplicate: ${String(e)}`);
+      toast.error(t("inventory.form.couldNotDuplicate", { error: String(e) }));
     }
   }
 
   async function handleArchive() {
     if (!initial) return;
-    if (!window.confirm("Archive this product? It will be hidden from the catalog."))
+    if (!window.confirm(t("inventory.form.archiveConfirm")))
       return;
     try {
       await archive.mutateAsync(initial.product.id);
       setDirty(false);
-      toast.success("Product archived");
+      toast.success(t("inventory.form.productArchived"));
       navigate("/inventory");
     } catch (e) {
-      toast.error(`Could not archive: ${String(e)}`);
+      toast.error(t("inventory.couldNotArchive", { error: String(e) }));
     }
   }
 
@@ -518,19 +520,19 @@ export function ProductForm({ mode, initial }: Props) {
         </Button>
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-lg font-semibold">
-            {mode === "edit" ? "Edit product" : "Create product"}
+            {mode === "edit" ? t("inventory.form.editTitle") : t("inventory.createProduct")}
           </h1>
           <p className="text-muted-foreground text-xs">
-            {dirty ? "Unsaved changes" : "All changes saved"}
+            {dirty ? t("inventory.form.unsavedChanges") : t("inventory.form.allSaved")}
           </p>
         </div>
         {mode === "edit" && (
           <>
             <Button variant="outline" size="sm" onClick={handleDuplicate}>
-              <Copy /> Duplicate
+              <Copy /> {t("inventory.form.duplicate")}
             </Button>
             <Button variant="outline" size="sm" onClick={handleArchive}>
-              <Archive /> Archive
+              <Archive /> {t("inventory.archive")}
             </Button>
           </>
         )}
@@ -541,11 +543,11 @@ export function ProductForm({ mode, initial }: Props) {
             disabled={saving}
             onClick={() => handleSave(true)}
           >
-            Save &amp; new
+            {t("inventory.form.saveAndNew")}
           </Button>
         )}
         <Button size="sm" disabled={saving} onClick={() => handleSave(false)}>
-          <Save /> Save
+          <Save /> {t("common.save")}
         </Button>
       </div>
 
@@ -555,22 +557,22 @@ export function ProductForm({ mode, initial }: Props) {
           {/* Basic information */}
           <Card>
             <CardHeader>
-              <CardTitle>Basic information</CardTitle>
+              <CardTitle>{t("inventory.form.basicInfo")}</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="p-name">Product name *</Label>
+                <Label htmlFor="p-name">{t("inventory.form.productName")}</Label>
                 <Input
                   id="p-name"
                   autoFocus
                   value={form.name}
                   onChange={(e) => set("name", e.target.value)}
-                  placeholder="e.g. Classic Crew Tee"
+                  placeholder={t("inventory.form.productNamePlaceholder")}
                 />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="grid gap-2">
-                  <Label>Category</Label>
+                  <Label>{t("inventory.colCategory")}</Label>
                   <EntityCombobox
                     items={(categories.data ?? []).map((c) => ({
                       id: c.id,
@@ -579,12 +581,12 @@ export function ProductForm({ mode, initial }: Props) {
                     value={form.categoryId}
                     onChange={(id) => set("categoryId", id)}
                     onCreate={(name) => createCategory.mutateAsync(name)}
-                    placeholder="Uncategorized"
-                    noun="category"
+                    placeholder={t("inventory.uncategorized")}
+                    noun={t("inventory.form.nounCategory")}
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="p-brand">Brand</Label>
+                  <Label htmlFor="p-brand">{t("inventory.colBrand")}</Label>
                   <Input
                     id="p-brand"
                     value={form.brand}
@@ -598,42 +600,42 @@ export function ProductForm({ mode, initial }: Props) {
           {/* Identification */}
           <Card>
             <CardHeader>
-              <CardTitle>Identification</CardTitle>
-              <CardDescription>Reference / SKU and barcode.</CardDescription>
+              <CardTitle>{t("inventory.form.identification")}</CardTitle>
+              <CardDescription>{t("inventory.form.identificationHint")}</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="p-ref">Reference / SKU</Label>
+                <Label htmlFor="p-ref">{t("inventory.form.reference")}</Label>
                 <div className="flex gap-2">
                   <Input
                     id="p-ref"
                     className="font-mono"
                     value={form.reference}
                     onChange={(e) => set("reference", e.target.value)}
-                    placeholder="e.g. SKU-AB12CD"
+                    placeholder={t("inventory.form.referencePlaceholder")}
                   />
                   <Button type="button" variant="outline" onClick={genReference}>
-                    <Sparkles /> Generate
+                    <Sparkles /> {t("inventory.form.generate")}
                   </Button>
                 </div>
               </div>
 
               {!form.hasVariants && (
                 <div className="grid gap-2">
-                  <Label htmlFor="p-barcode">Barcode</Label>
+                  <Label htmlFor="p-barcode">{t("inventory.barcode")}</Label>
                   <div className="flex gap-2">
                     <Input
                       id="p-barcode"
                       className="font-mono"
                       value={form.barcode}
                       onChange={(e) => set("barcode", e.target.value)}
-                      placeholder="Scan or generate"
+                      placeholder={t("inventory.form.scanOrGenerate")}
                     />
                     <Button type="button" variant="outline" onClick={genBarcode}>
-                      <RefreshCw /> Generate
+                      <RefreshCw /> {t("inventory.form.generate")}
                     </Button>
                     <Button type="button" variant="outline" onClick={printSimpleLabel}>
-                      <Printer /> Print
+                      <Printer /> {t("common.print")}
                     </Button>
                   </div>
                   <BarcodePreview
@@ -649,12 +651,12 @@ export function ProductForm({ mode, initial }: Props) {
           {/* Pricing */}
           <Card>
             <CardHeader>
-              <CardTitle>Pricing</CardTitle>
+              <CardTitle>{t("inventory.form.pricing")}</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-3">
               <div className="grid gap-2">
                 <Label htmlFor="p-cost">
-                  Purchase price{currency.symbol ? ` (${currency.symbol})` : ""}
+                  {t("inventory.form.purchasePrice")}{currency.symbol ? ` (${currency.symbol})` : ""}
                 </Label>
                 <Input
                   id="p-cost"
@@ -666,7 +668,7 @@ export function ProductForm({ mode, initial }: Props) {
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="p-price">
-                  Selling price{currency.symbol ? ` (${currency.symbol})` : ""}
+                  {t("inventory.form.sellingPrice")}{currency.symbol ? ` (${currency.symbol})` : ""}
                 </Label>
                 <Input
                   id="p-price"
@@ -677,7 +679,7 @@ export function ProductForm({ mode, initial }: Props) {
                 />
               </div>
               <div className="grid gap-2">
-                <Label>Profit margin</Label>
+                <Label>{t("inventory.form.profitMargin")}</Label>
                 <div className="flex h-9 items-center rounded-md border bg-muted/40 px-3 text-sm font-medium">
                   {margin == null ? "—" : `${margin.toFixed(1)} %`}
                 </div>
@@ -688,10 +690,8 @@ export function ProductForm({ mode, initial }: Props) {
           {/* Inventory + variants */}
           <Card>
             <CardHeader>
-              <CardTitle>Inventory</CardTitle>
-              <CardDescription>
-                Stock and, optionally, size / color variants.
-              </CardDescription>
+              <CardTitle>{t("inventory.title")}</CardTitle>
+              <CardDescription>{t("inventory.form.inventoryHint")}</CardDescription>
             </CardHeader>
             <CardContent>
               <VariantEditor
@@ -710,32 +710,32 @@ export function ProductForm({ mode, initial }: Props) {
           {/* Stock control */}
           <Card>
             <CardHeader>
-              <CardTitle>Stock control</CardTitle>
+              <CardTitle>{t("inventory.form.stockControl")}</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-3">
               <div className="grid gap-2">
-                <Label htmlFor="p-low">Low-stock alert threshold</Label>
+                <Label htmlFor="p-low">{t("inventory.form.lowStockThreshold")}</Label>
                 <Input
                   id="p-low"
                   inputMode="numeric"
                   value={form.lowStock}
                   onChange={(e) => set("lowStock", e.target.value)}
-                  placeholder={`Default (${inv.data?.default_low_stock_threshold ?? 5})`}
+                  placeholder={t("inventory.form.defaultValue", { value: inv.data?.default_low_stock_threshold ?? 5 })}
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="p-reorder">Reorder quantity</Label>
+                <Label htmlFor="p-reorder">{t("inventory.form.reorderQuantity")}</Label>
                 <Input
                   id="p-reorder"
                   inputMode="numeric"
                   value={form.reorder}
                   onChange={(e) => set("reorder", e.target.value)}
-                  placeholder="Optional"
+                  placeholder={t("common.optional")}
                 />
               </div>
               <div className="flex items-center justify-between gap-2 rounded-md border px-3 py-2">
                 <Label htmlFor="p-oos" className="text-sm">
-                  Out-of-stock alert
+                  {t("inventory.form.outOfStockAlert")}
                 </Label>
                 <Switch
                   id="p-oos"
@@ -749,11 +749,11 @@ export function ProductForm({ mode, initial }: Props) {
           {/* Additional */}
           <Card>
             <CardHeader>
-              <CardTitle>Additional information</CardTitle>
+              <CardTitle>{t("inventory.form.additionalInfo")}</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="p-desc">Description</Label>
+                <Label htmlFor="p-desc">{t("inventory.form.description")}</Label>
                 <Textarea
                   id="p-desc"
                   rows={3}
@@ -762,7 +762,7 @@ export function ProductForm({ mode, initial }: Props) {
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="p-notes">Notes / internal comments</Label>
+                <Label htmlFor="p-notes">{t("inventory.form.internalNotes")}</Label>
                 <Textarea
                   id="p-notes"
                   rows={2}
@@ -778,7 +778,7 @@ export function ProductForm({ mode, initial }: Props) {
         <div className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Supplier</CardTitle>
+              <CardTitle>{t("inventory.form.supplier")}</CardTitle>
             </CardHeader>
             <CardContent>
               <EntityCombobox
@@ -789,16 +789,16 @@ export function ProductForm({ mode, initial }: Props) {
                 value={form.supplierId}
                 onChange={(id) => set("supplierId", id)}
                 onCreate={(name) => createSupplier.mutateAsync({ name })}
-                placeholder="No supplier"
-                noun="supplier"
+                placeholder={t("inventory.form.noSupplier")}
+                noun={t("inventory.form.nounSupplier")}
               />
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Product media</CardTitle>
-              <CardDescription>Main image + gallery.</CardDescription>
+              <CardTitle>{t("inventory.form.productMedia")}</CardTitle>
+              <CardDescription>{t("inventory.form.productMediaHint")}</CardDescription>
             </CardHeader>
             <CardContent>
               <ImageUploader
@@ -814,8 +814,8 @@ export function ProductForm({ mode, initial }: Props) {
           {mode === "edit" && initial && (
             <Card>
               <CardHeader>
-                <CardTitle>Activity timeline</CardTitle>
-                <CardDescription>Product history log.</CardDescription>
+                <CardTitle>{t("inventory.form.activityTimeline")}</CardTitle>
+                <CardDescription>{t("inventory.form.activityHint")}</CardDescription>
               </CardHeader>
               <CardContent>
                 <ProductActivityTimeline productId={initial.product.id} />

@@ -9,13 +9,19 @@ import {
 } from "lucide-react"
 import { useTheme } from "next-themes"
 import { Toaster as Sonner, type ToasterProps } from "sonner"
+import { useAppStore } from "@/store/use-app-store"
+import { dirFor } from "@/lib/i18n"
 
 const Toaster = ({ ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme()
+  const language = useAppStore((s) => s.language)
+  const dir = dirFor(language)
 
   return (
     <Sonner
       theme={theme as ToasterProps["theme"]}
+      dir={dir}
+      position={dir === "rtl" ? "top-left" : "top-right"}
       className="toaster group"
       icons={{
         success: <CircleCheckIcon className="size-4" />,

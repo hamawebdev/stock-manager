@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search } from "lucide-react";
@@ -19,6 +20,7 @@ interface Props {
 
 /** Search products/variants and pick one. Clears the query after a pick. */
 export function VariantSearch({ onPick, placeholder }: Props) {
+  const { t } = useTranslation();
   const currency = useCurrency();
   const [query, setQuery] = useState("");
 
@@ -30,10 +32,10 @@ export function VariantSearch({ onPick, placeholder }: Props) {
 
   return (
     <div className="relative">
-      <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+      <Search className="text-muted-foreground absolute top-1/2 start-3 size-4 -translate-y-1/2" />
       <Input
-        className="pl-9"
-        placeholder={placeholder ?? "Search by name / SKU…"}
+        className="ps-9"
+        placeholder={placeholder ?? t("pos.searchPlaceholder")}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
@@ -43,7 +45,7 @@ export function VariantSearch({ onPick, placeholder }: Props) {
             results.data.map((v) => (
               <button
                 key={v.id}
-                className="hover:bg-accent flex w-full items-center justify-between px-3 py-2 text-left text-sm"
+                className="hover:bg-accent flex w-full items-center justify-between px-3 py-2 text-start text-sm"
                 onClick={() => {
                   onPick(v);
                   setQuery("");
@@ -65,7 +67,7 @@ export function VariantSearch({ onPick, placeholder }: Props) {
             ))
           ) : (
             <p className="text-muted-foreground px-3 py-2 text-sm">
-              {results.isFetching ? "Searching…" : "No matches."}
+              {results.isFetching ? t("pos.searching") : t("pos.noMatches")}
             </p>
           )}
         </div>

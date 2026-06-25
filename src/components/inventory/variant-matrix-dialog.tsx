@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Dialog,
   DialogContent,
@@ -31,6 +32,7 @@ export function VariantMatrixDialog({
   productId,
   productName,
 }: Props) {
+  const { t } = useTranslation();
   const sizes = useSizes();
   const colors = useColors();
   const generate = useGenerateVariants();
@@ -56,7 +58,7 @@ export function VariantMatrixDialog({
 
   async function handleGenerate() {
     if (combos === 0) {
-      toast.error("Select at least one size and one color");
+      toast.error(t("inventory.matrix.selectSizeColor"));
       return;
     }
     const specs: VariantSpec[] = [];
@@ -68,13 +70,11 @@ export function VariantMatrixDialog({
     try {
       const created = await generate.mutateAsync({ productId, specs });
       const skipped = specs.length - created;
-      toast.success(
-        `Added ${created} variant${created === 1 ? "" : "s"}` +
-          (skipped > 0 ? ` (${skipped} already existed)` : ""),
-      );
+      const base = t("inventory.matrix.added", { count: created });
+      toast.success(skipped > 0 ? `${base} ${t("inventory.matrix.alreadyExisted", { count: skipped })}` : base);
       onOpenChange(false);
     } catch (err) {
-      toast.error(`Could not generate variants: ${String(err)}`);
+      toast.error(t("inventory.matrix.couldNotGenerate", { error: String(err) }));
     }
   }
 
@@ -82,15 +82,13 @@ export function VariantMatrixDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Add variants — {productName}</DialogTitle>
-          <DialogDescription>
-            Pick sizes and colors. One variant is created per combination.
-          </DialogDescription>
+          <DialogTitle>{t("inventory.matrix.title", { name: productName })}</DialogTitle>
+          <DialogDescription>{t("inventory.matrix.description")}</DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-5 py-2">
           <div className="grid gap-2">
-            <Label>Sizes</Label>
+            <Label>{t("settings.lookups.sizes")}</Label>
             <div className="flex flex-wrap gap-3">
               {sizes.data?.map((s) => (
                 <label
@@ -108,7 +106,7 @@ export function VariantMatrixDialog({
           </div>
 
           <div className="grid gap-2">
-            <Label>Colors</Label>
+            <Label>{t("settings.lookups.colors")}</Label>
             <div className="flex flex-wrap gap-3">
               {colors.data?.map((c) => (
                 <label
@@ -134,14 +132,14 @@ export function VariantMatrixDialog({
 
         <DialogFooter className="items-center justify-between sm:justify-between">
           <span className="text-muted-foreground text-sm">
-            {combos} variant{combos === 1 ? "" : "s"} to create
+            {t("inventory.matrix.toCreate", { count: combos })}
           </span>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button onClick={handleGenerate} disabled={generate.isPending || combos === 0}>
-              Generate
+              {t("inventory.form.generate")}
             </Button>
           </div>
         </DialogFooter>

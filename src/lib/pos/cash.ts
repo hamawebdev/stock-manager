@@ -19,7 +19,12 @@ export interface CashSession {
   expected_cents: number | null;
   counted_cents: number | null;
   variance_cents: number | null;
+  /** Closing note (entered when the session is reconciled). */
   note: string | null;
+  cashier_name: string | null;
+  opening_note: string | null;
+  /** JSON map of denomination (minor units) -> quantity counted at close. */
+  count_breakdown_json: string | null;
 }
 
 export interface CashEvent {
@@ -41,13 +46,15 @@ export async function getOpenSession(): Promise<CashSession | null> {
 
 export async function openSession(
   openingFloatCents: number,
+  cashierName: string | null = null,
+  openingNote: string | null = null,
 ): Promise<CashSession> {
   const db = await getDb();
   const existing = await getOpenSession();
   if (existing) throw new Error("A cash session is already open");
   const res = await db.execute(
-    "INSERT INTO cash_sessions (opening_float_cents) VALUES ($1)",
-    [openingFloatCents],
+    "INSERT INTO cash_sessions (opening_float_cents, cashier_name, opening_note) VALUES ($1, $2, $3)",
+    [openingFloatCents, cashierName?.trim() || null, openingNote?.trim() || null],
   );
   const rows = await db.select<CashSession[]>(
     "SELECT * FROM cash_sessions WHERE id = $1",
@@ -77,12 +84,23 @@ export async function listEvents(sessionId: number): Promise<CashEvent[]> {
   );
 }
 
+/** Closed sessions, most recent first — for the history view. */
+export async function listSessions(limit = 30): Promise<CashSession[]> {
+  const db = await getDb();
+  return db.select<CashSession[]>(
+    "SELECT * FROM cash_sessions WHERE closed_at IS NOT NULL ORDER BY id DESC LIMIT $1",
+    [limit],
+  );
+}
+
 export interface CashBreakdown {
   opening_float_cents: number;
   sales_cents: number;
   returns_cash_out_cents: number;
   pay_in_cents: number;
   pay_out_cents: number;
+  /** Net cash that entered the drawer: sales - refunds + pay-ins - pay-outs. */
+  cash_collected_cents: number;
   expected_cents: number;
 }
 
@@ -93,9 +111,14 @@ export async function computeBreakdown(
   const db = await getDb();
   const opened = session.opened_at;
 
+  // Only the cash actually tendered at sale time enters the drawer: the paid
+  // portion of cash ('especes') sales. Non-cash modes (cheque/virement/cib/ccp)
+  // and the unpaid balance of credit sales don't. Later versements arrive as
+  // pay_in cash_events. Legacy sales were backfilled (paid_cents=total, mode=
+  // 'especes'), so they still count their full total here.
   const [{ v: sales }] = await db.select<{ v: number }[]>(
-    `SELECT COALESCE(SUM(total_cents),0) AS v FROM sales
-      WHERE status='completed' AND created_at >= $1`,
+    `SELECT COALESCE(SUM(paid_cents),0) AS v FROM sales
+      WHERE status='completed' AND payment_method='especes' AND created_at >= $1`,
     [opened],
   );
   const [{ v: returnsNet }] = await db.select<{ v: number }[]>(
@@ -114,14 +137,15 @@ export async function computeBreakdown(
     [session.id],
   );
 
-  const expected =
-    session.opening_float_cents + sales - returnsNet + payIn - payOut;
+  const cashCollected = sales - returnsNet + payIn - payOut;
+  const expected = session.opening_float_cents + cashCollected;
   return {
     opening_float_cents: session.opening_float_cents,
     sales_cents: sales,
     returns_cash_out_cents: returnsNet,
     pay_in_cents: payIn,
     pay_out_cents: payOut,
+    cash_collected_cents: cashCollected,
     expected_cents: expected,
   };
 }
@@ -129,6 +153,8 @@ export async function computeBreakdown(
 export async function closeSession(
   sessionId: number,
   countedCents: number,
+  closingNote: string | null = null,
+  breakdownJson: string | null = null,
 ): Promise<CashSession> {
   const db = await getDb();
   const rows = await db.select<CashSession[]>(
@@ -144,9 +170,17 @@ export async function closeSession(
   await db.execute(
     `UPDATE cash_sessions
         SET closed_at = CURRENT_TIMESTAMP, expected_cents = $1,
-            counted_cents = $2, variance_cents = $3
-      WHERE id = $4`,
-    [expected_cents, countedCents, variance, sessionId],
+            counted_cents = $2, variance_cents = $3,
+            note = $4, count_breakdown_json = $5
+      WHERE id = $6`,
+    [
+      expected_cents,
+      countedCents,
+      variance,
+      closingNote?.trim() || null,
+      breakdownJson,
+      sessionId,
+    ],
   );
   const updated = await db.select<CashSession[]>(
     "SELECT * FROM cash_sessions WHERE id = $1",

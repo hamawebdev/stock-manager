@@ -1,4 +1,5 @@
 import { useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Loader2, PackageX } from "lucide-react";
 import {
   useProductFull,
@@ -14,6 +15,7 @@ import { ProductForm } from "@/components/inventory/product-form";
  * are loaded, so the form initializes with correct money formatting.
  */
 export default function ProductEditPage() {
+  const { t } = useTranslation();
   const { id } = useParams();
   const productId = id ? Number(id) : null;
   const isEdit = productId != null;
@@ -37,7 +39,7 @@ export default function ProductEditPage() {
     return (
       <div className="text-muted-foreground flex h-64 flex-col items-center justify-center gap-2">
         <PackageX className="size-8" />
-        <p className="text-sm">Product not found.</p>
+        <p className="text-sm">{t("inventory.productNotFound")}</p>
       </div>
     );
   }

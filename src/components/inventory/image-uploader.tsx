@@ -1,4 +1,5 @@
 import { useRef, useState, type DragEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { ImagePlus, Star, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,7 @@ export function ImageUploader({
   onSetPrimary,
   disabled,
 }: Props) {
+  const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [dragOver, setDragOver] = useState(false);
 
@@ -72,12 +74,8 @@ export function ImageUploader({
         )}
       >
         <ImagePlus className="text-muted-foreground size-6" />
-        <p className="text-sm font-medium">
-          Drag &amp; drop images, or click to browse
-        </p>
-        <p className="text-muted-foreground text-xs">
-          PNG, JPG, WEBP or GIF
-        </p>
+        <p className="text-sm font-medium">{t("inventory.uploader.dropHint")}</p>
+        <p className="text-muted-foreground text-xs">{t("inventory.uploader.formats")}</p>
         <input
           ref={inputRef}
           type="file"
@@ -105,8 +103,8 @@ export function ImageUploader({
                 className="h-full w-full object-cover"
               />
               {img.isPrimary && (
-                <Badge className="absolute left-1 top-1 gap-1 px-1.5 py-0 text-[10px]">
-                  <Star className="size-3" /> Main
+                <Badge className="absolute start-1 top-1 gap-1 px-1.5 py-0 text-[10px]">
+                  <Star className="size-3" /> {t("inventory.uploader.main")}
                 </Badge>
               )}
               <div className="absolute inset-x-1 bottom-1 flex justify-between opacity-0 transition-opacity group-hover:opacity-100">
@@ -115,7 +113,7 @@ export function ImageUploader({
                     type="button"
                     size="icon-sm"
                     variant="secondary"
-                    title="Set as main image"
+                    title={t("inventory.uploader.setMain")}
                     onClick={() => onSetPrimary(img.key)}
                   >
                     <Star className="size-3.5" />
@@ -125,8 +123,8 @@ export function ImageUploader({
                   type="button"
                   size="icon-sm"
                   variant="destructive"
-                  title="Remove image"
-                  className="ml-auto"
+                  title={t("inventory.uploader.removeImage")}
+                  className="ms-auto"
                   onClick={() => onRemove(img.key)}
                 >
                   <X className="size-3.5" />

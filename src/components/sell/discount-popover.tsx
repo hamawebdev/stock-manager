@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Popover,
   PopoverContent,
@@ -23,7 +24,9 @@ interface Props {
 }
 
 /** Compact percent/fixed discount editor in a popover. */
-export function DiscountPopover({ value, onChange, label = "Discount" }: Props) {
+export function DiscountPopover({ value, onChange, label }: Props) {
+  const { t } = useTranslation();
+  const resolvedLabel = label ?? t("pos.discount");
   const currency = useCurrency();
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<Discount["type"]>(value?.type ?? "percent");
@@ -60,13 +63,13 @@ export function DiscountPopover({ value, onChange, label = "Discount" }: Props) 
           {active
             ? value!.type === "percent"
               ? `${value!.value}%`
-              : label
-            : label}
+              : resolvedLabel
+            : resolvedLabel}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-64">
         <div className="grid gap-3">
-          <Label>{label}</Label>
+          <Label>{resolvedLabel}</Label>
           <ToggleGroup
             type="single"
             value={type}
@@ -75,7 +78,7 @@ export function DiscountPopover({ value, onChange, label = "Discount" }: Props) 
           >
             <ToggleGroupItem value="percent">%</ToggleGroupItem>
             <ToggleGroupItem value="fixed">
-              {currency.symbol || "amount"}
+              {currency.symbol || t("pos.amount")}
             </ToggleGroupItem>
           </ToggleGroup>
           <Input
@@ -96,10 +99,10 @@ export function DiscountPopover({ value, onChange, label = "Discount" }: Props) 
                 setOpen(false);
               }}
             >
-              Clear
+              {t("common.clear")}
             </Button>
             <Button size="sm" onClick={apply}>
-              Apply
+              {t("common.apply")}
             </Button>
           </div>
         </div>

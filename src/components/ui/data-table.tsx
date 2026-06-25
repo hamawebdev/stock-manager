@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   type ColumnDef,
   type SortingState,
@@ -42,8 +43,9 @@ export function DataTable<TData, TValue>({
   onGlobalFilterChange,
   initialSorting = [],
   pageSize = 10,
-  emptyMessage = "No results.",
+  emptyMessage,
 }: DataTableProps<TData, TValue>) {
+  const { t } = useTranslation();
   const [sorting, setSorting] = useState<SortingState>(initialSorting);
 
   const table = useReactTable({
@@ -124,7 +126,7 @@ export function DataTable<TData, TValue>({
                   colSpan={columns.length}
                   className="text-muted-foreground py-10 text-center text-sm"
                 >
-                  {emptyMessage}
+                  {emptyMessage ?? t("common.noResults")}
                 </TableCell>
               </TableRow>
             )}
@@ -135,8 +137,11 @@ export function DataTable<TData, TValue>({
       {table.getPageCount() > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-muted-foreground text-sm">
-            Page {table.getState().pagination.pageIndex + 1} of{" "}
-            {table.getPageCount()} · {table.getFilteredRowModel().rows.length} rows
+            {t("table.pageInfo", {
+              page: table.getState().pagination.pageIndex + 1,
+              total: table.getPageCount(),
+              rows: table.getFilteredRowModel().rows.length,
+            })}
           </p>
           <div className="flex gap-2">
             <Button
@@ -145,7 +150,7 @@ export function DataTable<TData, TValue>({
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
             >
-              Previous
+              {t("common.previous")}
             </Button>
             <Button
               variant="outline"
@@ -153,7 +158,7 @@ export function DataTable<TData, TValue>({
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
             >
-              Next
+              {t("common.next")}
             </Button>
           </div>
         </div>

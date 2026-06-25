@@ -156,6 +156,30 @@ fn migrations() -> Vec<Migration> {
             sql: include_str!("../migrations/003_inventory_refactor.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 4,
+            description: "payment_center",
+            sql: include_str!("../migrations/004_payment_center.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 5,
+            description: "cash_session_notes",
+            sql: include_str!("../migrations/005_cash_session_notes.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 6,
+            description: "purchasing",
+            sql: include_str!("../migrations/006_purchasing.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 7,
+            description: "studio_billing",
+            sql: include_str!("../migrations/007_studio_billing.sql"),
+            kind: MigrationKind::Up,
+        },
     ]
 }
 

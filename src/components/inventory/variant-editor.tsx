@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Boxes, Layers, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -58,6 +59,7 @@ export function VariantEditor({
   symbology,
   barcodePrefix,
 }: Props) {
+  const { t } = useTranslation();
   const sizes = useSizes();
   const colors = useColors();
   const [sizeIds, setSizeIds] = useState<Set<number>>(new Set());
@@ -74,7 +76,7 @@ export function VariantEditor({
     const sizeList = sizes.data?.filter((s) => sizeIds.has(s.id)) ?? [];
     const colorList = colors.data?.filter((c) => colorIds.has(c.id)) ?? [];
     if (sizeList.length === 0 && colorList.length === 0) {
-      toast.error("Select at least one size or color");
+      toast.error(t("inventory.variantEditor.selectSizeColor"));
       return;
     }
     // Allow size-only or color-only grids by treating an empty axis as [null].
@@ -104,7 +106,7 @@ export function VariantEditor({
     onRows(next);
     setSizeIds(new Set());
     setColorIds(new Set());
-    if (added === 0) toast.info("Those combinations already exist");
+    if (added === 0) toast.info(t("inventory.variantEditor.alreadyExist"));
   }
 
   function updateRow(key: string, patch: Partial<VariantRow>) {
@@ -132,29 +134,29 @@ export function VariantEditor({
           type="button"
           onClick={() => onToggle(false)}
           className={cn(
-            "flex items-center gap-2 rounded-lg border p-3 text-left text-sm transition-colors",
+            "flex items-center gap-2 rounded-lg border p-3 text-start text-sm transition-colors",
             !hasVariants ? "border-primary bg-primary/5" : "hover:bg-accent/40",
           )}
         >
           <Boxes className="size-5 shrink-0" />
           <span>
-            <span className="block font-medium">Simple product</span>
-            <span className="text-muted-foreground text-xs">One stock count</span>
+            <span className="block font-medium">{t("inventory.variantEditor.simpleProduct")}</span>
+            <span className="text-muted-foreground text-xs">{t("inventory.variantEditor.oneStockCount")}</span>
           </span>
         </button>
         <button
           type="button"
           onClick={() => onToggle(true)}
           className={cn(
-            "flex items-center gap-2 rounded-lg border p-3 text-left text-sm transition-colors",
+            "flex items-center gap-2 rounded-lg border p-3 text-start text-sm transition-colors",
             hasVariants ? "border-primary bg-primary/5" : "hover:bg-accent/40",
           )}
         >
           <Layers className="size-5 shrink-0" />
           <span>
-            <span className="block font-medium">Has variants</span>
+            <span className="block font-medium">{t("inventory.variantEditor.hasVariants")}</span>
             <span className="text-muted-foreground text-xs">
-              Size / color, per-variant stock
+              {t("inventory.variantEditor.hasVariantsHint")}
             </span>
           </span>
         </button>
@@ -162,7 +164,7 @@ export function VariantEditor({
 
       {!hasVariants ? (
         <div className="grid max-w-xs gap-2">
-          <Label htmlFor="simple-stock">Current stock</Label>
+          <Label htmlFor="simple-stock">{t("inventory.variantEditor.currentStock")}</Label>
           <Input
             id="simple-stock"
             inputMode="numeric"
@@ -176,7 +178,7 @@ export function VariantEditor({
           {/* Size / color pickers */}
           <div className="grid gap-3 rounded-lg border p-3">
             <div className="grid gap-2">
-              <Label>Sizes</Label>
+              <Label>{t("settings.lookups.sizes")}</Label>
               <div className="flex flex-wrap gap-2">
                 {sizes.data?.map((s) => (
                   <label
@@ -193,7 +195,7 @@ export function VariantEditor({
               </div>
             </div>
             <div className="grid gap-2">
-              <Label>Colors</Label>
+              <Label>{t("settings.lookups.colors")}</Label>
               <div className="flex flex-wrap gap-2">
                 {colors.data?.map((c) => (
                   <label
@@ -217,7 +219,7 @@ export function VariantEditor({
             </div>
             <div>
               <Button type="button" variant="secondary" size="sm" onClick={addCombinations}>
-                <Plus className="size-4" /> Add combinations
+                <Plus className="size-4" /> {t("inventory.variantEditor.addCombinations")}
               </Button>
             </div>
           </div>
@@ -228,10 +230,10 @@ export function VariantEditor({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Variant</TableHead>
-                    <TableHead>SKU</TableHead>
-                    <TableHead>Barcode</TableHead>
-                    <TableHead className="w-24 text-right">Stock</TableHead>
+                    <TableHead>{t("inventory.variantEditor.variant")}</TableHead>
+                    <TableHead>{t("inventory.form.sku")}</TableHead>
+                    <TableHead>{t("inventory.barcode")}</TableHead>
+                    <TableHead className="w-24 text-end">{t("inventory.stock")}</TableHead>
                     <TableHead className="w-10" />
                   </TableRow>
                 </TableHeader>
@@ -253,7 +255,7 @@ export function VariantEditor({
                         <Input
                           className="h-8 w-32 font-mono text-xs"
                           value={r.sku}
-                          placeholder="(auto)"
+                          placeholder={t("inventory.variantEditor.autoPlaceholder")}
                           onChange={(e) => updateRow(r.key, { sku: e.target.value })}
                         />
                       </TableCell>
@@ -262,7 +264,7 @@ export function VariantEditor({
                           <Input
                             className="h-8 w-32 font-mono text-xs"
                             value={r.barcode}
-                            placeholder="(= SKU)"
+                            placeholder={t("inventory.variantEditor.equalsSkuPlaceholder")}
                             onChange={(e) =>
                               updateRow(r.key, { barcode: e.target.value })
                             }
@@ -271,16 +273,16 @@ export function VariantEditor({
                             type="button"
                             size="icon-sm"
                             variant="ghost"
-                            title="Generate barcode"
+                            title={t("inventory.variantEditor.generateBarcode")}
                             onClick={() => genRowBarcode(r.key)}
                           >
                             <RefreshCw className="size-3.5" />
                           </Button>
                         </div>
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-end">
                         <Input
-                          className="h-8 w-20 text-right"
+                          className="h-8 w-20 text-end"
                           inputMode="numeric"
                           value={r.stock}
                           onChange={(e) => updateRow(r.key, { stock: e.target.value })}
@@ -291,7 +293,7 @@ export function VariantEditor({
                           type="button"
                           size="icon-sm"
                           variant="ghost"
-                          title="Remove"
+                          title={t("common.remove")}
                           onClick={() => removeRow(r.key)}
                         >
                           <Trash2 className="size-3.5" />
@@ -304,7 +306,7 @@ export function VariantEditor({
             </div>
           ) : (
             <p className="text-muted-foreground rounded-lg border border-dashed py-6 text-center text-sm">
-              Pick sizes and colors above, then “Add combinations”.
+              {t("inventory.variantEditor.pickHint")}
             </p>
           )}
         </div>

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { format, subDays } from "date-fns";
 import type { ColumnDef } from "@tanstack/react-table";
 import { ArrowLeft, FileDown, FileText, Search, TrendingUp } from "lucide-react";
@@ -38,15 +39,22 @@ function stockStatus(
   return "in";
 }
 
-const STATUS_META: Record<StockStatus, { label: string; variant: "secondary" | "destructive" | "outline" }> = {
-  in: { label: "In stock", variant: "secondary" },
-  low: { label: "Low", variant: "outline" },
-  out: { label: "Out", variant: "destructive" },
+const STATUS_VARIANT: Record<StockStatus, "secondary" | "destructive" | "outline"> = {
+  in: "secondary",
+  low: "outline",
+  out: "destructive",
+};
+
+const STATUS_LABEL_KEY: Record<StockStatus, "bestSellers.status.in" | "bestSellers.status.low" | "bestSellers.status.out"> = {
+  in: "bestSellers.status.in",
+  low: "bestSellers.status.low",
+  out: "bestSellers.status.out",
 };
 
 const today = () => format(new Date(), "yyyy-MM-dd");
 
 export default function BestSellersPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const currency = useCurrency();
   const categories = useCategories();
@@ -91,14 +99,14 @@ export default function BestSellersPage() {
     () => [
       {
         accessorKey: "product_name",
-        header: "Product",
+        header: t("bestSellers.col.product"),
         cell: ({ row }) => (
           <span className="font-medium">{row.original.product_name}</span>
         ),
       },
       {
         accessorKey: "reference",
-        header: "SKU",
+        header: t("inventory.form.sku"),
         cell: ({ row }) => (
           <span className="font-mono text-xs text-muted-foreground">
             {row.original.reference ?? "—"}
@@ -108,60 +116,59 @@ export default function BestSellersPage() {
       {
         accessorFn: (r) => r.category_name ?? "—",
         id: "category",
-        header: "Category",
+        header: t("inventory.colCategory"),
       },
-      { accessorKey: "units_sold", header: "Units sold" },
+      { accessorKey: "units_sold", header: t("bestSellers.col.unitsSold") },
       {
         accessorKey: "revenue_cents",
-        header: "Revenue",
+        header: t("bestSellers.col.revenue"),
         cell: ({ row }) => formatMoney(row.original.revenue_cents, currency),
       },
-      { accessorKey: "current_stock", header: "Stock" },
+      { accessorKey: "current_stock", header: t("inventory.stock") },
       {
         id: "status",
         accessorFn: (r) =>
           stockStatus(r.current_stock, r.low_stock_threshold, defaultLow),
-        header: "Status",
+        header: t("common.status"),
         cell: ({ row }) => {
           const s = stockStatus(
             row.original.current_stock,
             row.original.low_stock_threshold,
             defaultLow,
           );
-          return <Badge variant={STATUS_META[s].variant}>{STATUS_META[s].label}</Badge>;
+          return <Badge variant={STATUS_VARIANT[s]}>{t(STATUS_LABEL_KEY[s])}</Badge>;
         },
       },
       {
         accessorKey: "last_sale_date",
-        header: "Last sale",
+        header: t("bestSellers.col.lastSale"),
         cell: ({ row }) =>
           row.original.last_sale_date
             ? format(new Date(row.original.last_sale_date), "yyyy-MM-dd")
             : "—",
       },
     ],
-    [currency, defaultLow],
+    [currency, defaultLow, t],
   );
 
   const exportColumns: ExportColumn<BestSellerProduct>[] = [
-    { header: "Product", value: (r) => r.product_name },
-    { header: "SKU", value: (r) => r.reference ?? "" },
-    { header: "Category", value: (r) => r.category_name ?? "" },
-    { header: "Units Sold", value: (r) => r.units_sold },
-    { header: "Revenue", value: (r) => money(r.revenue_cents) },
-    { header: "Current Stock", value: (r) => r.current_stock },
+    { header: t("bestSellers.col.product"), value: (r) => r.product_name },
+    { header: t("inventory.form.sku"), value: (r) => r.reference ?? "" },
+    { header: t("inventory.colCategory"), value: (r) => r.category_name ?? "" },
+    { header: t("bestSellers.col.unitsSold"), value: (r) => r.units_sold },
+    { header: t("bestSellers.col.revenue"), value: (r) => money(r.revenue_cents) },
+    { header: t("bestSellers.export.currentStock"), value: (r) => r.current_stock },
     {
-      header: "Stock Status",
+      header: t("bestSellers.export.stockStatus"),
       value: (r) =>
-        STATUS_META[stockStatus(r.current_stock, r.low_stock_threshold, defaultLow)]
-          .label,
+        t(STATUS_LABEL_KEY[stockStatus(r.current_stock, r.low_stock_threshold, defaultLow)]),
     },
-    { header: "Last Sale", value: (r) => r.last_sale_date ?? "" },
+    { header: t("bestSellers.col.lastSale"), value: (r) => r.last_sale_date ?? "" },
   ];
 
   async function onExport(kind: "excel" | "pdf") {
     if (rows.length === 0) {
-      toast.error("Nothing to export");
+      toast.error(t("bestSellers.nothingToExport"));
       return;
     }
     const name = `best-sellers_${from}_to_${to}`;
@@ -169,12 +176,12 @@ export default function BestSellersPage() {
       // Lazy-load the export libs (xlsx / jspdf) only when actually exporting.
       const { exportRowsToExcel, exportRowsToPdf } = await import("@/lib/export");
       if (kind === "excel") {
-        await exportRowsToExcel(rows, exportColumns, name, "Best Sellers");
+        await exportRowsToExcel(rows, exportColumns, name, t("bestSellers.sheetName"));
       } else {
-        await exportRowsToPdf(rows, exportColumns, name, `Best Selling Products (${from} → ${to})`);
+        await exportRowsToPdf(rows, exportColumns, name, t("bestSellers.pdfTitle", { from, to }));
       }
     } catch (e) {
-      toast.error(`Export failed: ${String(e)}`);
+      toast.error(t("bestSellers.exportFailed", { error: String(e) }));
     }
   }
 
@@ -186,38 +193,36 @@ export default function BestSellersPage() {
         </Button>
         <div className="flex-1">
           <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
-            <TrendingUp className="size-6" /> Best selling products
+            <TrendingUp className="size-6" /> {t("bestSellers.title")}
           </h1>
-          <p className="text-muted-foreground text-sm">
-            Units sold, revenue and stock health over a date range.
-          </p>
+          <p className="text-muted-foreground text-sm">{t("bestSellers.subtitle")}</p>
         </div>
         <Button variant="outline" onClick={() => onExport("excel")}>
-          <FileDown /> Excel
+          <FileDown /> {t("bestSellers.excel")}
         </Button>
         <Button variant="outline" onClick={() => onExport("pdf")}>
-          <FileText /> PDF
+          <FileText /> {t("bestSellers.pdf")}
         </Button>
       </div>
 
       {/* Filters */}
       <div className="grid gap-3 rounded-lg border p-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="grid gap-1.5">
-          <Label className="text-xs">From</Label>
+          <Label className="text-xs">{t("bestSellers.from")}</Label>
           <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
         </div>
         <div className="grid gap-1.5">
-          <Label className="text-xs">To</Label>
+          <Label className="text-xs">{t("bestSellers.to")}</Label>
           <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
         </div>
         <div className="grid gap-1.5">
-          <Label className="text-xs">Category</Label>
+          <Label className="text-xs">{t("inventory.colCategory")}</Label>
           <Select value={category} onValueChange={setCategory}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All categories</SelectItem>
+              <SelectItem value="all">{t("bestSellers.allCategories")}</SelectItem>
               {categories.data?.map((c) => (
                 <SelectItem key={c.id} value={c.name}>
                   {c.name}
@@ -227,34 +232,34 @@ export default function BestSellersPage() {
           </Select>
         </div>
         <div className="grid gap-1.5">
-          <Label className="text-xs">Stock status</Label>
+          <Label className="text-xs">{t("bestSellers.stockStatusLabel")}</Label>
           <Select value={status} onValueChange={(v) => setStatus(v as typeof status)}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Any status</SelectItem>
-              <SelectItem value="in">In stock</SelectItem>
-              <SelectItem value="low">Low</SelectItem>
-              <SelectItem value="out">Out of stock</SelectItem>
+              <SelectItem value="all">{t("bestSellers.anyStatus")}</SelectItem>
+              <SelectItem value="in">{t("bestSellers.status.in")}</SelectItem>
+              <SelectItem value="low">{t("bestSellers.status.low")}</SelectItem>
+              <SelectItem value="out">{t("bestSellers.outOfStock")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:col-span-2 lg:col-span-4">
-          <span className="text-muted-foreground text-xs">Quick range:</span>
+          <span className="text-muted-foreground text-xs">{t("bestSellers.quickRange")}</span>
           {[7, 30, 90].map((d) => (
             <Button key={d} variant="outline" size="sm" onClick={() => setPreset(d)}>
-              {d}d
+              {t("bestSellers.days", { count: d })}
             </Button>
           ))}
           <Button variant="outline" size="sm" onClick={() => setPreset("all")}>
-            All time
+            {t("bestSellers.allTime")}
           </Button>
-          <div className="relative ml-auto w-full sm:w-64">
-            <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+          <div className="relative ms-auto w-full sm:w-64">
+            <Search className="text-muted-foreground absolute top-1/2 start-3 size-4 -translate-y-1/2" />
             <Input
-              className="pl-9"
-              placeholder="Search products…"
+              className="ps-9"
+              placeholder={t("inventory.searchPlaceholder")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -269,7 +274,7 @@ export default function BestSellersPage() {
         onGlobalFilterChange={setSearch}
         initialSorting={[{ id: "units_sold", desc: true }]}
         pageSize={15}
-        emptyMessage={best.isLoading ? "Loading…" : "No sales in this range."}
+        emptyMessage={best.isLoading ? t("common.loading") : t("bestSellers.noSales")}
       />
     </div>
   );

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Card,
   CardContent,
@@ -21,6 +22,7 @@ import {
 } from "@/lib/pos/queries";
 
 export function LookupsCard() {
+  const { t } = useTranslation();
   const sizes = useSizes();
   const colors = useColors();
   const categories = useCategories();
@@ -69,15 +71,13 @@ export function LookupsCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Catalog options</CardTitle>
-        <CardDescription>
-          Sizes, colors, and categories used when building products.
-        </CardDescription>
+        <CardTitle>{t("settings.lookups.title")}</CardTitle>
+        <CardDescription>{t("settings.lookups.description")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Sizes */}
         <div className="space-y-2">
-          <p className="text-sm font-medium">Sizes</p>
+          <p className="text-sm font-medium">{t("settings.lookups.sizes")}</p>
           <div className="flex flex-wrap gap-1.5">
             {sizes.data?.map((s) => (
               <Badge key={s.id} variant="secondary">
@@ -90,18 +90,18 @@ export function LookupsCard() {
               className="max-w-40"
               value={sizeName}
               onChange={(e) => setSizeName(e.target.value)}
-              placeholder="e.g. 4XL"
+              placeholder={t("settings.lookups.sizePlaceholder")}
               onKeyDown={(e) => e.key === "Enter" && addSize()}
             />
             <Button variant="outline" size="sm" onClick={addSize}>
-              <Plus /> Add
+              <Plus /> {t("common.add")}
             </Button>
           </div>
         </div>
 
         {/* Colors */}
         <div className="space-y-2 border-t pt-4">
-          <p className="text-sm font-medium">Colors</p>
+          <p className="text-sm font-medium">{t("settings.lookups.colors")}</p>
           <div className="flex flex-wrap gap-1.5">
             {colors.data?.map((c) => (
               <Badge key={c.id} variant="secondary" className="gap-1.5">
@@ -126,18 +126,18 @@ export function LookupsCard() {
               className="max-w-40"
               value={colorName}
               onChange={(e) => setColorName(e.target.value)}
-              placeholder="e.g. Olive"
+              placeholder={t("settings.lookups.colorPlaceholder")}
               onKeyDown={(e) => e.key === "Enter" && addColor()}
             />
             <Button variant="outline" size="sm" onClick={addColor}>
-              <Plus /> Add
+              <Plus /> {t("common.add")}
             </Button>
           </div>
         </div>
 
         {/* Categories */}
         <div className="space-y-2 border-t pt-4">
-          <p className="text-sm font-medium">Categories</p>
+          <p className="text-sm font-medium">{t("settings.lookups.categories")}</p>
           <div className="flex flex-wrap gap-1.5">
             {categories.data?.length ? (
               categories.data.map((c) => (
@@ -146,7 +146,7 @@ export function LookupsCard() {
                 </Badge>
               ))
             ) : (
-              <span className="text-muted-foreground text-sm">None yet.</span>
+              <span className="text-muted-foreground text-sm">{t("settings.lookups.noneYet")}</span>
             )}
           </div>
           <div className="flex gap-2">
@@ -154,11 +154,11 @@ export function LookupsCard() {
               className="max-w-40"
               value={catName}
               onChange={(e) => setCatName(e.target.value)}
-              placeholder="e.g. Shirts"
+              placeholder={t("settings.lookups.categoryPlaceholder")}
               onKeyDown={(e) => e.key === "Enter" && addCategory()}
             />
             <Button variant="outline" size="sm" onClick={addCategory}>
-              <Plus /> Add
+              <Plus /> {t("common.add")}
             </Button>
           </div>
         </div>

@@ -8,6 +8,7 @@ import * as XLSX from "xlsx";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { toast } from "sonner";
+import i18n from "@/lib/i18n";
 
 export interface ExportColumn<T> {
   header: string;
@@ -25,7 +26,7 @@ async function saveBytes(suggestedName: string, bytes: Uint8Array): Promise<void
     const path = await save({ defaultPath: suggestedName });
     if (!path) return; // user cancelled
     await invoke("write_bytes", { path, data: Array.from(bytes) });
-    toast.success(`Exported to ${path}`);
+    toast.success(i18n.t("common.exportedTo", { path }));
     return;
   }
   // Browser fallback.

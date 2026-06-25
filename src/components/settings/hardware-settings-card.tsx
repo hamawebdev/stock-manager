@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Card,
   CardContent,
@@ -25,6 +26,7 @@ import {
   type HardwareConfig,
 } from "@/lib/pos/hardware";
 import { currencyFromSettings } from "@/lib/pos/settings";
+import { intlLocale } from "@/lib/i18n";
 
 /** True when the chosen printer mode needs a device address / IP. */
 function needsAddress(mode: string) {
@@ -32,6 +34,7 @@ function needsAddress(mode: string) {
 }
 
 export function HardwareSettingsCard() {
+  const { t } = useTranslation();
   const { data } = useHardwareConfig();
   const settings = useSettings();
   const save = useSaveHardwareConfig();
@@ -49,9 +52,9 @@ export function HardwareSettingsCard() {
   async function handleSave() {
     try {
       await save.mutateAsync(cfg!);
-      toast.success("Hardware settings saved");
+      toast.success(t("settings.hardware.saved"));
     } catch (err) {
-      toast.error(`Could not save: ${String(err)}`);
+      toast.error(t("common.couldNotSave", { error: String(err) }));
     }
   }
 
@@ -66,9 +69,9 @@ export function HardwareSettingsCard() {
           header: settings.data?.receipt_header,
           footer: settings.data?.receipt_footer,
           code: "TEST-0001",
-          datetime: new Date().toLocaleString(),
+          datetime: new Date().toLocaleString(intlLocale()),
           lines: [
-            { description: "Test item", qty: 1, unit_price_cents: 1000, line_total_cents: 1000 },
+            { description: t("settings.hardware.testItem"), qty: 1, unit_price_cents: 1000, line_total_cents: 1000 },
           ],
           subtotal_cents: 1000,
           discount_cents: 0,
@@ -79,42 +82,39 @@ export function HardwareSettingsCard() {
         },
         cfg!,
       );
-      toast.success("Test receipt sent");
+      toast.success(t("settings.hardware.testReceiptSent"));
     } catch (err) {
-      toast.error(`Print failed: ${String(err)}`);
+      toast.error(t("settings.hardware.printFailed", { error: String(err) }));
     }
   }
 
   async function handleTestDrawer() {
     try {
       await openCashDrawer(cfg!);
-      toast.success("Drawer kick sent");
+      toast.success(t("settings.hardware.drawerKickSent"));
     } catch (err) {
-      toast.error(`Drawer failed: ${String(err)}`);
+      toast.error(t("settings.hardware.drawerFailed", { error: String(err) }));
     }
   }
 
   const addrPlaceholder =
     cfg.printer_mode === "escpos_network"
       ? "192.168.1.50:9100"
-      : "/dev/usb/lp0 or printer queue path";
+      : t("settings.hardware.addrUsbPlaceholder");
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Hardware</CardTitle>
-        <CardDescription>
-          Receipt printer, cash drawer, and label printer. Leave on “System
-          print” to use the OS print dialog with any installed printer.
-        </CardDescription>
+        <CardTitle>{t("settings.hardware.title")}</CardTitle>
+        <CardDescription>{t("settings.hardware.description")}</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-5">
         {/* Receipt printer */}
         <div className="grid gap-3">
-          <h4 className="text-sm font-semibold">Receipt printer</h4>
+          <h4 className="text-sm font-semibold">{t("settings.hardware.receiptPrinter")}</h4>
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label>Mode</Label>
+              <Label>{t("settings.hardware.mode")}</Label>
               <Select
                 value={cfg.printer_mode}
                 onValueChange={(v) => set("printer_mode", v as HardwareConfig["printer_mode"])}
@@ -123,15 +123,15 @@ export function HardwareSettingsCard() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="os">System print (OS)</SelectItem>
-                  <SelectItem value="escpos_usb">ESC/POS — USB</SelectItem>
-                  <SelectItem value="escpos_network">ESC/POS — Network</SelectItem>
-                  <SelectItem value="disabled">Disabled</SelectItem>
+                  <SelectItem value="os">{t("settings.hardware.printerOs")}</SelectItem>
+                  <SelectItem value="escpos_usb">{t("settings.hardware.escposUsb")}</SelectItem>
+                  <SelectItem value="escpos_network">{t("settings.hardware.escposNetwork")}</SelectItem>
+                  <SelectItem value="disabled">{t("settings.hardware.disabled")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="grid gap-2">
-              <Label>Paper width</Label>
+              <Label>{t("settings.hardware.paperWidth")}</Label>
               <Select
                 value={cfg.paper_width}
                 onValueChange={(v) => set("paper_width", v as HardwareConfig["paper_width"])}
@@ -148,7 +148,7 @@ export function HardwareSettingsCard() {
           </div>
           {needsAddress(cfg.printer_mode) && (
             <div className="grid gap-2">
-              <Label>Printer address</Label>
+              <Label>{t("settings.hardware.printerAddress")}</Label>
               <Input
                 value={cfg.printer_address}
                 onChange={(e) => set("printer_address", e.target.value)}
@@ -160,10 +160,10 @@ export function HardwareSettingsCard() {
 
         {/* Cash drawer */}
         <div className="grid gap-3 border-t pt-4">
-          <h4 className="text-sm font-semibold">Cash drawer</h4>
+          <h4 className="text-sm font-semibold">{t("settings.hardware.cashDrawer")}</h4>
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label>Connection</Label>
+              <Label>{t("settings.hardware.connection")}</Label>
               <Select
                 value={cfg.drawer_mode}
                 onValueChange={(v) => set("drawer_mode", v as HardwareConfig["drawer_mode"])}
@@ -172,15 +172,15 @@ export function HardwareSettingsCard() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="printer">Via receipt printer</SelectItem>
-                  <SelectItem value="usb">Direct USB</SelectItem>
-                  <SelectItem value="none">None / manual</SelectItem>
+                  <SelectItem value="printer">{t("settings.hardware.viaPrinter")}</SelectItem>
+                  <SelectItem value="usb">{t("settings.hardware.directUsb")}</SelectItem>
+                  <SelectItem value="none">{t("settings.hardware.noneManual")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             {cfg.drawer_mode === "usb" && (
               <div className="grid gap-2">
-                <Label>Drawer device path</Label>
+                <Label>{t("settings.hardware.drawerDevicePath")}</Label>
                 <Input
                   value={cfg.drawer_address}
                   onChange={(e) => set("drawer_address", e.target.value)}
@@ -193,10 +193,10 @@ export function HardwareSettingsCard() {
 
         {/* Label printer */}
         <div className="grid gap-3 border-t pt-4">
-          <h4 className="text-sm font-semibold">Label printer</h4>
+          <h4 className="text-sm font-semibold">{t("settings.hardware.labelPrinter")}</h4>
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label>Mode</Label>
+              <Label>{t("settings.hardware.mode")}</Label>
               <Select
                 value={cfg.label_mode}
                 onValueChange={(v) => set("label_mode", v as HardwareConfig["label_mode"])}
@@ -205,17 +205,18 @@ export function HardwareSettingsCard() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="same_as_receipt">Same as receipt printer</SelectItem>
-                  <SelectItem value="os">System print (OS)</SelectItem>
-                  <SelectItem value="escpos_usb">ESC/POS — USB</SelectItem>
-                  <SelectItem value="escpos_network">ESC/POS — Network</SelectItem>
-                  <SelectItem value="disabled">Disabled</SelectItem>
+                  <SelectItem value="same_as_receipt">{t("settings.hardware.sameAsReceipt")}</SelectItem>
+                  <SelectItem value="os">{t("settings.hardware.printerOs")}</SelectItem>
+                  <SelectItem value="pdf">{t("settings.hardware.pdfExport")}</SelectItem>
+                  <SelectItem value="escpos_usb">{t("settings.hardware.escposUsb")}</SelectItem>
+                  <SelectItem value="escpos_network">{t("settings.hardware.escposNetwork")}</SelectItem>
+                  <SelectItem value="disabled">{t("settings.hardware.disabled")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             {needsAddress(cfg.label_mode) && (
               <div className="grid gap-2">
-                <Label>Label printer address</Label>
+                <Label>{t("settings.hardware.labelAddress")}</Label>
                 <Input
                   value={cfg.label_address}
                   onChange={(e) => set("label_address", e.target.value)}
@@ -225,7 +226,7 @@ export function HardwareSettingsCard() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label>Label width (mm)</Label>
+              <Label>{t("settings.hardware.labelWidth")}</Label>
               <Input
                 inputMode="numeric"
                 value={String(cfg.label_width_mm)}
@@ -233,7 +234,7 @@ export function HardwareSettingsCard() {
               />
             </div>
             <div className="grid gap-2">
-              <Label>Label height (mm)</Label>
+              <Label>{t("settings.hardware.labelHeight")}</Label>
               <Input
                 inputMode="numeric"
                 value={String(cfg.label_height_mm)}
@@ -245,13 +246,13 @@ export function HardwareSettingsCard() {
       </CardContent>
       <CardFooter className="flex-wrap gap-2">
         <Button onClick={handleSave} disabled={save.isPending}>
-          Save
+          {t("common.save")}
         </Button>
         <Button variant="outline" onClick={handleTestReceipt}>
-          Test receipt
+          {t("settings.hardware.testReceipt")}
         </Button>
         <Button variant="outline" onClick={handleTestDrawer}>
-          Test drawer
+          {t("settings.hardware.testDrawer")}
         </Button>
       </CardFooter>
     </Card>

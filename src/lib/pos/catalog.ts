@@ -122,6 +122,7 @@ export interface ProductPageQuery {
   search?: string;
   categoryId?: number | null;
   supplierId?: number | null;
+  brand?: string | null;
   stockStatus?: StockStatusFilter;
   /** Global fallback when a product has no `low_stock_threshold`. */
   defaultLowStock?: number;
@@ -158,6 +159,10 @@ export async function listProductsPage(q: ProductPageQuery): Promise<ProductPage
     where.push(`p.supplier_id = $${i++}`);
     args.push(q.supplierId);
   }
+  if (q.brand?.trim()) {
+    where.push(`p.brand = $${i++}`);
+    args.push(q.brand.trim());
+  }
   const whereSql = `WHERE ${where.join(" AND ")}`;
 
   // Stock-status filter operates on the aggregated on-hand total.
@@ -187,6 +192,17 @@ export async function listProductsPage(q: ProductPageQuery): Promise<ProductPage
   }
   const rows = await db.select<ProductSummary[]>(pageSql, pageArgs);
   return { rows, total: countRows[0]?.n ?? 0 };
+}
+
+/** Distinct, non-empty brand names for the POS browse filter chips. */
+export async function listBrands(): Promise<string[]> {
+  const db = await getDb();
+  const rows = await db.select<{ brand: string }[]>(
+    `SELECT DISTINCT brand FROM products
+       WHERE archived = 0 AND brand IS NOT NULL AND TRIM(brand) <> ''
+       ORDER BY brand`,
+  );
+  return rows.map((r) => r.brand);
 }
 
 export async function getProduct(id: number): Promise<Product | null> {
@@ -347,7 +363,7 @@ export async function updateVariant(
 }
 
 const VARIANT_DETAIL_SELECT = `
-  SELECT v.*, p.name AS product_name,
+  SELECT v.*, p.name AS product_name, p.category_id AS category_id,
          s.name AS size_name, c.name AS color_name, c.hex AS color_hex,
          COALESCE(v.price_cents, p.price_cents) AS effective_price_cents
     FROM variants v
@@ -373,6 +389,19 @@ export async function findVariantByBarcode(
   const rows = await db.select<VariantDetail[]>(
     `${VARIANT_DETAIL_SELECT} WHERE v.barcode = $1 AND v.archived = 0 LIMIT 1`,
     [barcode],
+  );
+  return rows[0] ?? null;
+}
+
+/** Full detail for one variant by id. No archived filter — a return may
+ *  reference an item that was archived after it was sold. */
+export async function getVariantDetail(
+  id: number,
+): Promise<VariantDetail | null> {
+  const db = await getDb();
+  const rows = await db.select<VariantDetail[]>(
+    `${VARIANT_DETAIL_SELECT} WHERE v.id = $1 LIMIT 1`,
+    [id],
   );
   return rows[0] ?? null;
 }

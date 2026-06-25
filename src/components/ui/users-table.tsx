@@ -65,7 +65,7 @@ export const UsersTable = memo(({ onAddUser }: UsersTableProps) => {
             <span>+12%</span>
           </div>
           <Button variant="outline" size="sm" onClick={onAddUser}>
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="me-2 h-4 w-4" />
             <span className="hidden sm:inline">Add User</span>
             <span className="sm:hidden">Add</span>
           </Button>
@@ -125,13 +125,13 @@ export const UsersTable = memo(({ onAddUser }: UsersTableProps) => {
               </div>
             </div>
 
-            <div className="ml-auto flex items-center gap-3">
+            <div className="ms-auto flex items-center gap-3">
               <div className="text-muted-foreground flex items-center gap-1 text-xs">
                 <Calendar className="h-3 w-3" />
                 <span>{new Date(user.joinDate).toLocaleDateString()}</span>
               </div>
 
-              <Button variant="ghost" size="sm" className="ml-auto">
+              <Button variant="ghost" size="sm" className="ms-auto">
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </div>

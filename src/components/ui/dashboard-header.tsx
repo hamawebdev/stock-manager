@@ -46,8 +46,8 @@ export const DashboardHeader = memo(
     return (
       <header className="bg-background/95 sticky top-0 z-50 flex h-16 w-full shrink-0 items-center gap-2 border-b backdrop-blur transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
         <div className="flex items-center gap-2 px-4">
-          <SidebarTrigger className="-ml-1" />
-          <Separator orientation="vertical" className="mr-2 h-4" />
+          <SidebarTrigger className="-ms-1" />
+          <Separator orientation="vertical" className="me-2 h-4" />
           <Breadcrumb>
             <BreadcrumbList>
               <BreadcrumbItem className="hidden md:block">
@@ -57,7 +57,7 @@ export const DashboardHeader = memo(
           </Breadcrumb>
         </div>
 
-        <div className="ml-auto flex items-center gap-2 px-4">
+        <div className="ms-auto flex items-center gap-2 px-4">
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -70,19 +70,19 @@ export const DashboardHeader = memo(
                 placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
-                className="w-64 pl-10"
+                className="w-64 ps-10"
               />
             </div>
 
             {/* Desktop Actions */}
             <div className="hidden items-center gap-2 md:flex">
               <Button variant="outline" size="sm">
-                <Filter className="mr-2 h-4 w-4" />
+                <Filter className="me-2 h-4 w-4" />
                 Filter
               </Button>
 
               <Button variant="outline" size="sm" onClick={onExport}>
-                <Download className="mr-2 h-4 w-4" />
+                <Download className="me-2 h-4 w-4" />
                 Export
               </Button>
 
@@ -93,7 +93,7 @@ export const DashboardHeader = memo(
                 disabled={isRefreshing}
               >
                 <RefreshCw
-                  className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`}
+                  className={`me-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`}
                 />
                 Refresh
               </Button>
@@ -108,19 +108,19 @@ export const DashboardHeader = memo(
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem onClick={() => onSearchChange('')}>
-                  <Search className="mr-2 h-4 w-4" />
+                  <Search className="me-2 h-4 w-4" />
                   Search
                 </DropdownMenuItem>
                 <DropdownMenuItem>
-                  <Filter className="mr-2 h-4 w-4" />
+                  <Filter className="me-2 h-4 w-4" />
                   Filter
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={onExport}>
-                  <Download className="mr-2 h-4 w-4" />
+                  <Download className="me-2 h-4 w-4" />
                   Export
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={onRefresh}>
-                  <RefreshCw className="mr-2 h-4 w-4" />
+                  <RefreshCw className="me-2 h-4 w-4" />
                   Refresh
                 </DropdownMenuItem>
               </DropdownMenuContent>

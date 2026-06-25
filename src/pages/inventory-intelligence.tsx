@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
 import type { ColumnDef } from "@tanstack/react-table";
 import { ArrowLeft, Brain, Flame, Snowflake, Skull, RotateCcw } from "lucide-react";
@@ -26,6 +27,7 @@ interface Row extends MovementAnalyticsRow {
 }
 
 export default function InventoryIntelligencePage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const inv = useInventorySettings();
   const defaultLow = inv.data?.default_low_stock_threshold ?? 5;
@@ -71,47 +73,47 @@ export default function InventoryIntelligencePage() {
   const baseCols: ColumnDef<Row>[] = [
     {
       accessorKey: "product_name",
-      header: "Product",
+      header: t("bestSellers.col.product"),
       cell: ({ row }) => <span className="font-medium">{row.original.product_name}</span>,
     },
     {
       accessorFn: (r) => r.category_name ?? "—",
       id: "category",
-      header: "Category",
+      header: t("inventory.colCategory"),
     },
-    { accessorKey: "units_sold", header: `Units (${days}d)` },
+    { accessorKey: "units_sold", header: t("intelligence.unitsDays", { count: days }) },
     {
       accessorKey: "velocity",
-      header: "Per day",
+      header: t("intelligence.perDay"),
       cell: ({ row }) => row.original.velocity.toFixed(2),
     },
-    { accessorKey: "current_stock", header: "Stock" },
+    { accessorKey: "current_stock", header: t("inventory.stock") },
     {
       accessorKey: "last_sale_date",
-      header: "Last sale",
+      header: t("bestSellers.col.lastSale"),
       cell: ({ row }) =>
         row.original.last_sale_date
           ? format(new Date(row.original.last_sale_date), "yyyy-MM-dd")
-          : "Never",
+          : t("intelligence.never"),
     },
   ];
 
   const reorderCols: ColumnDef<Row>[] = [
     {
       accessorKey: "product_name",
-      header: "Product",
+      header: t("bestSellers.col.product"),
       cell: ({ row }) => <span className="font-medium">{row.original.product_name}</span>,
     },
-    { accessorKey: "current_stock", header: "Stock" },
+    { accessorKey: "current_stock", header: t("inventory.stock") },
     {
       accessorFn: (r) => r.low_stock_threshold ?? defaultLow,
       id: "threshold",
-      header: "Threshold",
+      header: t("intelligence.threshold"),
     },
-    { accessorKey: "velocity", header: "Per day", cell: ({ row }) => row.original.velocity.toFixed(2) },
+    { accessorKey: "velocity", header: t("intelligence.perDay"), cell: ({ row }) => row.original.velocity.toFixed(2) },
     {
       accessorKey: "suggested_reorder",
-      header: "Suggested reorder",
+      header: t("intelligence.suggestedReorder"),
       cell: ({ row }) => (
         <Badge variant="secondary">{row.original.suggested_reorder}</Badge>
       ),
@@ -126,21 +128,19 @@ export default function InventoryIntelligencePage() {
         </Button>
         <div className="flex-1">
           <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
-            <Brain className="size-6" /> Inventory intelligence
+            <Brain className="size-6" /> {t("intelligence.title")}
           </h1>
-          <p className="text-muted-foreground text-sm">
-            Fast / slow / dead stock and recommended reorders.
-          </p>
+          <p className="text-muted-foreground text-sm">{t("intelligence.subtitle")}</p>
         </div>
         <Select value={String(days)} onValueChange={(v) => setDays(Number(v))}>
           <SelectTrigger className="w-36">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="7">Last 7 days</SelectItem>
-            <SelectItem value="30">Last 30 days</SelectItem>
-            <SelectItem value="90">Last 90 days</SelectItem>
-            <SelectItem value="365">Last 365 days</SelectItem>
+            <SelectItem value="7">{t("intelligence.lastDays", { count: 7 })}</SelectItem>
+            <SelectItem value="30">{t("intelligence.lastDays", { count: 30 })}</SelectItem>
+            <SelectItem value="90">{t("intelligence.lastDays", { count: 90 })}</SelectItem>
+            <SelectItem value="365">{t("intelligence.lastDays", { count: 365 })}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -148,16 +148,16 @@ export default function InventoryIntelligencePage() {
       <Tabs defaultValue="fast">
         <TabsList>
           <TabsTrigger value="fast">
-            <Flame className="size-4" /> Fast ({fast.length})
+            <Flame className="size-4" /> {t("intelligence.fast")} ({fast.length})
           </TabsTrigger>
           <TabsTrigger value="slow">
-            <Snowflake className="size-4" /> Slow ({slow.length})
+            <Snowflake className="size-4" /> {t("intelligence.slow")} ({slow.length})
           </TabsTrigger>
           <TabsTrigger value="dead">
-            <Skull className="size-4" /> Dead ({dead.length})
+            <Skull className="size-4" /> {t("intelligence.dead")} ({dead.length})
           </TabsTrigger>
           <TabsTrigger value="reorder">
-            <RotateCcw className="size-4" /> Reorder ({reorder.length})
+            <RotateCcw className="size-4" /> {t("intelligence.reorder")} ({reorder.length})
           </TabsTrigger>
         </TabsList>
 
@@ -166,7 +166,7 @@ export default function InventoryIntelligencePage() {
             columns={baseCols}
             data={fast}
             initialSorting={[{ id: "velocity", desc: true }]}
-            emptyMessage={analytics.isLoading ? "Loading…" : "No sales yet."}
+            emptyMessage={analytics.isLoading ? t("common.loading") : t("intelligence.noSales")}
           />
         </TabsContent>
         <TabsContent value="slow" className="mt-4">
@@ -174,7 +174,7 @@ export default function InventoryIntelligencePage() {
             columns={baseCols}
             data={slow}
             initialSorting={[{ id: "velocity", desc: false }]}
-            emptyMessage={analytics.isLoading ? "Loading…" : "Nothing slow-moving."}
+            emptyMessage={analytics.isLoading ? t("common.loading") : t("intelligence.nothingSlow")}
           />
         </TabsContent>
         <TabsContent value="dead" className="mt-4">
@@ -182,7 +182,7 @@ export default function InventoryIntelligencePage() {
             columns={baseCols}
             data={dead}
             initialSorting={[{ id: "current_stock", desc: true }]}
-            emptyMessage={analytics.isLoading ? "Loading…" : "No dead stock — nice!"}
+            emptyMessage={analytics.isLoading ? t("common.loading") : t("intelligence.noDead")}
           />
         </TabsContent>
         <TabsContent value="reorder" className="mt-4">
@@ -190,7 +190,7 @@ export default function InventoryIntelligencePage() {
             columns={reorderCols}
             data={reorder}
             initialSorting={[{ id: "current_stock", desc: false }]}
-            emptyMessage={analytics.isLoading ? "Loading…" : "Stock levels look healthy."}
+            emptyMessage={analytics.isLoading ? t("common.loading") : t("intelligence.healthy")}
           />
         </TabsContent>
       </Tabs>

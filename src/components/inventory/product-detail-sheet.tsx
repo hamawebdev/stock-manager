@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Sheet,
   SheetContent,
@@ -42,6 +43,7 @@ export function ProductDetailSheet({
   onOpenChange,
   onEditProduct,
 }: Props) {
+  const { t } = useTranslation();
   const open = !!product;
   const variants = useProductVariants(product?.id ?? null);
   const [matrixOpen, setMatrixOpen] = useState(false);
@@ -53,11 +55,11 @@ export function ProductDetailSheet({
         {product && (
           <>
             <SheetHeader>
-              <div className="flex items-center justify-between gap-2 pr-6">
+              <div className="flex items-center justify-between gap-2 pe-6">
                 <div>
                   <SheetTitle>{product.name}</SheetTitle>
                   <SheetDescription>
-                    {product.category_name ?? "Uncategorized"}
+                    {product.category_name ?? t("inventory.uncategorized")}
                     {product.brand ? ` · ${product.brand}` : ""}
                   </SheetDescription>
                 </div>
@@ -66,17 +68,17 @@ export function ProductDetailSheet({
                   size="sm"
                   onClick={() => onEditProduct(product)}
                 >
-                  <Pencil /> Edit
+                  <Pencil /> {t("common.edit")}
                 </Button>
               </div>
             </SheetHeader>
 
             <div className="flex items-center justify-between px-4">
               <h3 className="text-sm font-medium">
-                Variants ({variants.data?.length ?? 0})
+                {t("inventory.variantsCount", { count: variants.data?.length ?? 0 })}
               </h3>
               <Button size="sm" onClick={() => setMatrixOpen(true)}>
-                <Plus /> Add variants
+                <Plus /> {t("inventory.addVariants")}
               </Button>
             </div>
 
@@ -85,11 +87,11 @@ export function ProductDetailSheet({
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Size</TableHead>
-                      <TableHead>Color</TableHead>
-                      <TableHead>Barcode</TableHead>
-                      <TableHead className="text-right">Price</TableHead>
-                      <TableHead className="text-right">Stock</TableHead>
+                      <TableHead>{t("inventory.size")}</TableHead>
+                      <TableHead>{t("inventory.color")}</TableHead>
+                      <TableHead>{t("inventory.barcode")}</TableHead>
+                      <TableHead className="text-end">{t("common.price")}</TableHead>
+                      <TableHead className="text-end">{t("inventory.stock")}</TableHead>
                       <TableHead></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -106,8 +108,7 @@ export function ProductDetailSheet({
                 </Table>
               ) : (
                 <p className="text-muted-foreground py-8 text-center text-sm">
-                  No variants yet. Click “Add variants” to generate the
-                  size/color grid.
+                  {t("inventory.noVariantsHint")}
                 </p>
               )}
             </div>
@@ -141,6 +142,7 @@ function VariantRow({
   productId: number;
   onAdjust: () => void;
 }) {
+  const { t } = useTranslation();
   const currency = useCurrency();
   const update = useUpdateVariant(productId);
   const [barcode, setBarcode] = useState(variant.barcode ?? "");
@@ -154,7 +156,7 @@ function VariantRow({
     try {
       await update.mutateAsync({ id: variant.id, fields: { barcode: next } });
     } catch (err) {
-      toast.error(`Barcode not saved: ${String(err)}`);
+      toast.error(t("inventory.barcodeNotSaved", { error: String(err) }));
       setBarcode(variant.barcode ?? "");
     }
   }
@@ -162,7 +164,7 @@ function VariantRow({
   async function commitPrice() {
     const cents = parseMoney(price || "0", currency.decimals);
     if (cents == null) {
-      toast.error("Invalid price");
+      toast.error(t("inventory.invalidPrice"));
       setPrice(formatMoney(variant.effective_price_cents, { ...currency, symbol: "" }));
       return;
     }
@@ -170,13 +172,13 @@ function VariantRow({
     try {
       await update.mutateAsync({ id: variant.id, fields: { price_cents: cents } });
     } catch (err) {
-      toast.error(`Price not saved: ${String(err)}`);
+      toast.error(t("inventory.priceNotSaved", { error: String(err) }));
     }
   }
 
   async function handlePrintLabel() {
     if (!variant.barcode) {
-      toast.error("This variant has no barcode to print");
+      toast.error(t("inventory.noBarcodeToPrint"));
       return;
     }
     try {
@@ -187,9 +189,9 @@ function VariantRow({
         price_cents: variant.effective_price_cents,
         currency,
       });
-      toast.success("Label sent to printer");
+      toast.success(t("inventory.labelSent"));
     } catch (err) {
-      toast.error(`Label print failed: ${String(err)}`);
+      toast.error(t("inventory.labelFailed", { error: String(err) }));
     }
   }
 
@@ -215,31 +217,31 @@ function VariantRow({
           onBlur={commitBarcode}
         />
       </TableCell>
-      <TableCell className="text-right">
+      <TableCell className="text-end">
         <Input
-          className="h-8 w-20 text-right"
+          className="h-8 w-20 text-end"
           inputMode="decimal"
           value={price}
           onChange={(e) => setPrice(e.target.value)}
           onBlur={commitPrice}
         />
       </TableCell>
-      <TableCell className="text-right">
+      <TableCell className="text-end">
         <Badge variant={variant.stock <= 0 ? "destructive" : "secondary"}>
           {variant.stock}
         </Badge>
       </TableCell>
-      <TableCell className="text-right whitespace-nowrap">
+      <TableCell className="text-end whitespace-nowrap">
         <Button
           variant="ghost"
           size="icon-sm"
           onClick={handlePrintLabel}
-          title="Print label"
+          title={t("inventory.printLabel")}
         >
           <Tag />
         </Button>
         <Button variant="ghost" size="sm" onClick={onAdjust}>
-          Adjust
+          {t("inventory.adjust")}
         </Button>
       </TableCell>
     </TableRow>

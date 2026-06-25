@@ -1,5 +1,6 @@
 import { memo } from 'react';
 import { useTheme } from 'next-themes';
+import { useTranslation } from 'react-i18next';
 import { NavLink } from 'react-router-dom';
 import {
   Sidebar,
@@ -15,28 +16,29 @@ import {
   SidebarRail,
 } from '@/components/ui/sidebar';
 import {
-  ShoppingCart,
+  CreditCard,
   Package,
-  RotateCcw,
-  Wallet,
+  ShoppingCart,
   BarChart3,
   Settings,
+  FileText,
   Moon,
   Sun,
   Store,
 } from 'lucide-react';
 
 const menuItems = [
-  { title: 'Sell', icon: ShoppingCart, to: '/', end: true },
-  { title: 'Inventory', icon: Package, to: '/inventory', end: false },
-  { title: 'Returns', icon: RotateCcw, to: '/returns', end: false },
-  { title: 'Cash', icon: Wallet, to: '/cash', end: false },
-  { title: 'Reports', icon: BarChart3, to: '/reports', end: false },
-  { title: 'Settings', icon: Settings, to: '/settings', end: false },
-];
+  { key: 'nav.payments', icon: CreditCard, to: '/', end: true },
+  { key: 'nav.inventory', icon: Package, to: '/inventory', end: false },
+  { key: 'nav.purchasing', icon: ShoppingCart, to: '/purchasing', end: false },
+  { key: 'nav.studio', icon: FileText, to: '/studio', end: false },
+  { key: 'nav.reports', icon: BarChart3, to: '/reports', end: false },
+  { key: 'nav.settings', icon: Settings, to: '/settings', end: false },
+] as const;
 
 export const AdminSidebar = memo(() => {
   const { theme, setTheme } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <Sidebar collapsible="icon">
@@ -48,9 +50,9 @@ export const AdminSidebar = memo(() => {
                 <div className="bg-primary text-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
                   <Store className="h-5 w-5" />
                 </div>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">Atelier</span>
-                  <span className="truncate text-xs">Point of Sale</span>
+                <div className="grid flex-1 text-start text-sm leading-tight">
+                  <span className="truncate font-semibold">{t('app.name')}</span>
+                  <span className="truncate text-xs">{t('app.tagline')}</span>
                 </div>
               </NavLink>
             </SidebarMenuButton>
@@ -60,18 +62,19 @@ export const AdminSidebar = memo(() => {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <SidebarGroupLabel>{t('nav.navigation')}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => {
                 const Icon = item.icon;
+                const title = t(item.key);
                 return (
                   <SidebarMenuItem key={item.to}>
                     <NavLink to={item.to} end={item.end}>
                       {({ isActive }) => (
-                        <SidebarMenuButton isActive={isActive} tooltip={item.title}>
+                        <SidebarMenuButton isActive={isActive} tooltip={title}>
                           <Icon />
-                          <span>{item.title}</span>
+                          <span>{title}</span>
                         </SidebarMenuButton>
                       )}
                     </NavLink>
@@ -87,11 +90,11 @@ export const AdminSidebar = memo(() => {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
-              tooltip="Toggle theme"
+              tooltip={t('nav.toggleTheme')}
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             >
               {theme === 'dark' ? <Sun /> : <Moon />}
-              <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+              <span>{theme === 'dark' ? t('nav.lightMode') : t('nav.darkMode')}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

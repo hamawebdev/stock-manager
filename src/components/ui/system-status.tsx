@@ -64,7 +64,7 @@ export const SystemStatus = memo(() => {
                   />
                 </div>
                 <span
-                  className={`text-sm font-medium ${item.color} min-w-[60px] text-right`}
+                  className={`text-sm font-medium ${item.color} min-w-[60px] text-end`}
                 >
                   {item.status}
                 </span>

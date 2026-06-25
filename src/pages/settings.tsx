@@ -1,5 +1,7 @@
 import { platform, version } from "@tauri-apps/plugin-os";
+import { useTranslation } from "react-i18next";
 import { useAppStore } from "@/store/use-app-store";
+import { SUPPORTED_LANGUAGES, LANGUAGE_NAMES } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -12,43 +14,47 @@ import { ShopSettingsCard } from "@/components/settings/shop-settings-card";
 import { LookupsCard } from "@/components/settings/lookups-card";
 import { HardwareSettingsCard } from "@/components/settings/hardware-settings-card";
 import { DataSettingsCard } from "@/components/settings/data-settings-card";
+import { PromotionsCard } from "@/components/settings/promotions-card";
+import { SecurityCard } from "@/components/settings/security-card";
 
 const themes = ["light", "dark", "system"] as const;
 
 export default function SettingsPage() {
+  const { t } = useTranslation();
   const theme = useAppStore((s) => s.theme);
   const setTheme = useAppStore((s) => s.setTheme);
+  const language = useAppStore((s) => s.language);
+  const setLanguage = useAppStore((s) => s.setLanguage);
   // plugin-os exposes platform()/version() synchronously under Tauri.
   const osInfo = `${platform()} ${version()}`;
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6 p-6">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">Settings</h2>
-        <p className="text-muted-foreground">
-          Shop profile, hardware, and appearance.
-        </p>
+        <h2 className="text-2xl font-bold tracking-tight">{t("settings.title")}</h2>
+        <p className="text-muted-foreground">{t("settings.subtitle")}</p>
       </div>
 
       <ShopSettingsCard />
       <LookupsCard />
+      <PromotionsCard />
+      <SecurityCard />
       <HardwareSettingsCard />
       <DataSettingsCard />
 
       <Card>
         <CardHeader>
-          <CardTitle>Appearance</CardTitle>
-          <CardDescription>Persisted via Zustand.</CardDescription>
+          <CardTitle>{t("settings.language.title")}</CardTitle>
+          <CardDescription>{t("settings.language.description")}</CardDescription>
         </CardHeader>
-        <CardContent className="flex gap-2">
-          {themes.map((t) => (
+        <CardContent className="flex flex-wrap gap-2">
+          {SUPPORTED_LANGUAGES.map((lng) => (
             <Button
-              key={t}
-              variant={theme === t ? "default" : "outline"}
-              onClick={() => setTheme(t)}
-              className="capitalize"
+              key={lng}
+              variant={language === lng ? "default" : "outline"}
+              onClick={() => setLanguage(lng)}
             >
-              {t}
+              {LANGUAGE_NAMES[lng]}
             </Button>
           ))}
         </CardContent>
@@ -56,8 +62,26 @@ export default function SettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>System</CardTitle>
-          <CardDescription>Read via @tauri-apps/plugin-os.</CardDescription>
+          <CardTitle>{t("settings.appearance.title")}</CardTitle>
+          <CardDescription>{t("settings.appearance.description")}</CardDescription>
+        </CardHeader>
+        <CardContent className="flex gap-2">
+          {themes.map((th) => (
+            <Button
+              key={th}
+              variant={theme === th ? "default" : "outline"}
+              onClick={() => setTheme(th)}
+            >
+              {t(`settings.appearance.${th}`)}
+            </Button>
+          ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("settings.system.title")}</CardTitle>
+          <CardDescription>{t("settings.system.description")}</CardDescription>
         </CardHeader>
         <CardContent>
           <p className="text-sm">{osInfo || "…"}</p>

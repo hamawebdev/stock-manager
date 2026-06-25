@@ -47,6 +47,57 @@ export async function getTodaySummary(): Promise<TodaySummary> {
   };
 }
 
+export interface ReturnsReportRow {
+  id: number;
+  code: string;
+  created_at: string;
+  original_sale_code: string | null;
+  customer_name: string | null;
+  kind: "refund" | "exchange";
+  return_value_cents: number;
+  net_cash_cents: number;
+}
+
+export interface ReturnsReport {
+  rows: ReturnsReportRow[];
+  return_count: number;
+  /** Cash paid back to customers (net_cash_cents where positive). */
+  refund_total_cents: number;
+  /** Total value of goods brought back. */
+  returned_value_cents: number;
+}
+
+/** Returns & refunds over the last `days` days, newest first, with totals. */
+export async function getReturnsReport(days = 30): Promise<ReturnsReport> {
+  const db = await getDb();
+  const rows = await db.select<ReturnsReportRow[]>(
+    `SELECT r.id, r.code, r.created_at,
+            s.code AS original_sale_code,
+            c.name AS customer_name,
+            r.kind, r.return_value_cents, r.net_cash_cents
+       FROM returns r
+       LEFT JOIN sales s     ON s.id = r.original_sale_id
+       LEFT JOIN customers c ON c.id = s.customer_id
+      WHERE date(r.created_at,'localtime') >= date('now','localtime',$1)
+      ORDER BY r.id DESC`,
+    [`-${days - 1} days`],
+  );
+  const refund_total_cents = rows.reduce(
+    (sum, r) => sum + (r.net_cash_cents > 0 ? r.net_cash_cents : 0),
+    0,
+  );
+  const returned_value_cents = rows.reduce(
+    (sum, r) => sum + r.return_value_cents,
+    0,
+  );
+  return {
+    rows,
+    return_count: rows.length,
+    refund_total_cents,
+    returned_value_cents,
+  };
+}
+
 export interface DayPoint {
   day: string; // YYYY-MM-DD (local)
   total_cents: number;
@@ -128,7 +179,7 @@ export async function getBestSellers(opts: {
     args.push(opts.from);
   }
   if (opts.to) {
-    where.push(`date(s.created_at,'localtime') <= $${i++}`);
+    where.push(`date(s.created_at,'localtime') <= $${i}`);
     args.push(opts.to);
   }
   return db.select<BestSellerProduct[]>(

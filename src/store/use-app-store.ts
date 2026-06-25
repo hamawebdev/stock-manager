@@ -1,11 +1,14 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+import type { Language } from "@/lib/i18n";
 
 type Theme = "light" | "dark" | "system";
 
 interface AppState {
   theme: Theme;
   setTheme: (theme: Theme) => void;
+  language: Language;
+  setLanguage: (language: Language) => void;
 }
 
 /**
@@ -17,6 +20,8 @@ export const useAppStore = create<AppState>()(
     (set) => ({
       theme: "system",
       setTheme: (theme) => set({ theme }),
+      language: "en",
+      setLanguage: (language) => set({ language }),
     }),
     {
       name: "app-store",

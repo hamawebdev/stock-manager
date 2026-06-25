@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { ArrowLeft, FileSpreadsheet, Download, Upload, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,7 @@ const TEMPLATE_COLUMNS: ExportColumn<Record<string, string | number>>[] = [
 ];
 
 export default function BulkImportPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const currency = useCurrency();
   const importer = useBulkImport();
@@ -79,9 +81,9 @@ export default function BulkImportPage() {
         const stockStr = field(raw, ["stock", "qty", "quantity"]) || "0";
         const lowStr = field(raw, ["low_stock", "low stock", "low stock threshold"]);
         const error = !name
-          ? "Missing name"
+          ? t("bulkImport.missingName")
           : purchase == null || selling == null
-            ? "Invalid price"
+            ? t("inventory.invalidPrice")
             : undefined;
         return {
           name,
@@ -98,9 +100,9 @@ export default function BulkImportPage() {
       });
       setFileName(file.name);
       setRows(parsed);
-      if (parsed.length === 0) toast.error("No rows found in the sheet");
+      if (parsed.length === 0) toast.error(t("bulkImport.noRows"));
     } catch (e) {
-      toast.error(`Could not read file: ${String(e)}`);
+      toast.error(t("bulkImport.couldNotRead", { error: String(e) }));
     }
   }
 
@@ -119,13 +121,13 @@ export default function BulkImportPage() {
         low_stock: 5,
       },
     ];
-    await exportRowsToExcel(example, TEMPLATE_COLUMNS, "product-import-template", "Products");
+    await exportRowsToExcel(example, TEMPLATE_COLUMNS, "product-import-template", t("bulkImport.productsSheet"));
   }
 
   async function runImport() {
     const importable = rows.filter((r) => !r.error);
     if (importable.length === 0) {
-      toast.error("No valid rows to import");
+      toast.error(t("bulkImport.noValidRows"));
       return;
     }
     try {
@@ -143,13 +145,13 @@ export default function BulkImportPage() {
       const res = await importer.mutateAsync(payload);
       setDone({ created: res.created, failed: res.failed });
       if (res.failed > 0) {
-        toast.warning(`Imported ${res.created}, ${res.failed} failed`);
+        toast.warning(t("bulkImport.importedWithFailures", { created: res.created, failed: res.failed }));
         res.errors.slice(0, 5).forEach((m) => toast.error(m));
       } else {
-        toast.success(`Imported ${res.created} products`);
+        toast.success(t("bulkImport.importedProducts", { count: res.created }));
       }
     } catch (e) {
-      toast.error(`Import failed: ${String(e)}`);
+      toast.error(t("bulkImport.importFailed", { error: String(e) }));
     }
   }
 
@@ -163,14 +165,12 @@ export default function BulkImportPage() {
         </Button>
         <div className="flex-1">
           <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
-            <FileSpreadsheet className="size-6" /> Bulk import
+            <FileSpreadsheet className="size-6" /> {t("bulkImport.title")}
           </h1>
-          <p className="text-muted-foreground text-sm">
-            Import products from an Excel or CSV file.
-          </p>
+          <p className="text-muted-foreground text-sm">{t("bulkImport.subtitle")}</p>
         </div>
         <Button variant="outline" onClick={downloadTemplate}>
-          <Download /> Template
+          <Download /> {t("bulkImport.template")}
         </Button>
       </div>
 
@@ -190,12 +190,9 @@ export default function BulkImportPage() {
       >
         <Upload className="text-muted-foreground size-6" />
         <p className="text-sm font-medium">
-          {fileName ?? "Drop a .xlsx / .csv file, or click to browse"}
+          {fileName ?? t("bulkImport.dropHint")}
         </p>
-        <p className="text-muted-foreground text-xs">
-          Columns: name, category, supplier, reference, barcode, purchase_price,
-          selling_price, stock, low_stock
-        </p>
+        <p className="text-muted-foreground text-xs">{t("bulkImport.columnsHint")}</p>
         <input
           ref={inputRef}
           type="file"
@@ -212,25 +209,26 @@ export default function BulkImportPage() {
         <>
           <div className="flex items-center justify-between">
             <p className="text-sm">
-              <span className="font-medium">{rows.length}</span> rows ·{" "}
-              <span className="text-green-600">{validCount} valid</span>
+              <span className="font-medium">{rows.length}</span> {t("bulkImport.rows")} ·{" "}
+              <span className="text-green-600">{t("bulkImport.validCount", { count: validCount })}</span>
               {rows.length - validCount > 0 && (
                 <span className="text-destructive">
                   {" "}
-                  · {rows.length - validCount} with errors
+                  · {t("bulkImport.withErrors", { count: rows.length - validCount })}
                 </span>
               )}
             </p>
             <Button onClick={runImport} disabled={importer.isPending || validCount === 0}>
-              <Upload /> Import {validCount} products
+              <Upload /> {t("bulkImport.importCount", { count: validCount })}
             </Button>
           </div>
 
           {done && (
             <div className="flex items-center gap-2 rounded-md border border-green-600/30 bg-green-600/10 px-3 py-2 text-sm">
               <CheckCircle2 className="size-4 text-green-600" />
-              Imported {done.created} products
-              {done.failed > 0 ? `, ${done.failed} failed` : ""}.
+              {done.failed > 0
+                ? t("bulkImport.doneWithFailures", { created: done.created, failed: done.failed })
+                : t("bulkImport.done", { created: done.created })}
             </div>
           )}
 
@@ -238,12 +236,12 @@ export default function BulkImportPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Supplier</TableHead>
-                  <TableHead className="text-right">Purchase</TableHead>
-                  <TableHead className="text-right">Selling</TableHead>
-                  <TableHead className="text-right">Stock</TableHead>
+                  <TableHead>{t("common.name")}</TableHead>
+                  <TableHead>{t("inventory.colCategory")}</TableHead>
+                  <TableHead>{t("inventory.form.supplier")}</TableHead>
+                  <TableHead className="text-end">{t("bulkImport.purchase")}</TableHead>
+                  <TableHead className="text-end">{t("bulkImport.selling")}</TableHead>
+                  <TableHead className="text-end">{t("inventory.stock")}</TableHead>
                   <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
@@ -257,14 +255,14 @@ export default function BulkImportPage() {
                     <TableCell className="text-muted-foreground">
                       {r.supplier ?? "—"}
                     </TableCell>
-                    <TableCell className="text-right">{money(r.purchase_cents)}</TableCell>
-                    <TableCell className="text-right">{money(r.selling_cents)}</TableCell>
-                    <TableCell className="text-right">{r.stock}</TableCell>
+                    <TableCell className="text-end">{money(r.purchase_cents)}</TableCell>
+                    <TableCell className="text-end">{money(r.selling_cents)}</TableCell>
+                    <TableCell className="text-end">{r.stock}</TableCell>
                     <TableCell>
                       {r.error ? (
                         <Badge variant="destructive">{r.error}</Badge>
                       ) : (
-                        <Badge variant="secondary">OK</Badge>
+                        <Badge variant="secondary">{t("common.ok")}</Badge>
                       )}
                     </TableCell>
                   </TableRow>

@@ -1,13 +1,13 @@
 /**
- * Returns & exchanges. A return brings items back (optionally restocking) and,
- * for an exchange, sends replacement items out. Everything happens in one
- * transaction so stock and the cash settlement stay consistent.
+ * Returns / refunds. A return brings items back into the shop (restocking) and
+ * refunds their value to the customer. Everything happens in one transaction so
+ * stock and the cash settlement stay consistent.
  *
- * net_cash_cents > 0  → shop pays the customer (refund)
- * net_cash_cents < 0  → customer pays the shop (exchange upcharge)
+ * net_cash_cents is the amount paid back to the customer (the refund total).
  */
-import { withTx } from "./db";
+import { getDb, withTx } from "./db";
 import { applyMovement } from "./inventory";
+import type { ReturnRow } from "./types";
 
 export interface ReturnInItemInput {
   variant_id: number;
@@ -18,26 +18,16 @@ export interface ReturnInItemInput {
   restock: boolean;
 }
 
-export interface ReturnOutItemInput {
-  variant_id: number;
-  description: string;
-  qty: number;
-  unit_price_cents: number;
-}
-
 export interface ProcessReturnInput {
   original_sale_id?: number | null;
   inItems: ReturnInItemInput[];
-  outItems: ReturnOutItemInput[];
   note?: string | null;
 }
 
 export interface ProcessedReturn {
   id: number;
   code: string;
-  kind: "refund" | "exchange";
   return_value_cents: number;
-  exchange_value_cents: number;
   net_cash_cents: number;
 }
 
@@ -52,12 +42,6 @@ export async function processReturn(
     (s, i) => s + i.qty * i.unit_price_cents,
     0,
   );
-  const exchangeValue = input.outItems.reduce(
-    (s, o) => s + o.qty * o.unit_price_cents,
-    0,
-  );
-  const kind = input.outItems.length > 0 ? "exchange" : "refund";
-  const netCash = returnValue - exchangeValue;
 
   return withTx(async (db) => {
     const [{ n }] = await db.select<{ n: number }[]>(
@@ -65,16 +49,17 @@ export async function processReturn(
     );
     const code = `R-${String(n + 1).padStart(6, "0")}`;
 
+    // kind is always 'refund' now (exchanges removed); exchange_value stays 0.
     const res = await db.execute(
       `INSERT INTO returns
          (code, original_sale_id, kind, return_value_cents,
           exchange_value_cents, net_cash_cents, note)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [code, input.original_sale_id ?? null, kind, returnValue, exchangeValue, netCash, input.note ?? null],
+       VALUES ($1, $2, 'refund', $3, 0, $4, $5)`,
+      [code, input.original_sale_id ?? null, returnValue, returnValue, input.note ?? null],
     );
     const returnId = res.lastInsertId as number;
 
-    // Items coming back in.
+    // Items coming back in (restock + reduce the original sale's open qty).
     for (const i of input.inItems) {
       await db.execute(
         `INSERT INTO return_in_items
@@ -100,30 +85,32 @@ export async function processReturn(
       }
     }
 
-    // Replacement items going out (exchange) — leave stock.
-    for (const o of input.outItems) {
-      await db.execute(
-        `INSERT INTO return_out_items
-           (return_id, variant_id, description, qty, unit_price_cents, line_total_cents)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [returnId, o.variant_id, o.description, o.qty, o.unit_price_cents, o.qty * o.unit_price_cents],
-      );
-      await applyMovement(db, {
-        variantId: o.variant_id,
-        delta: -o.qty,
-        reason: "exchange",
-        refType: "return",
-        refId: returnId,
-      });
-    }
-
     return {
       id: returnId,
       code,
-      kind,
       return_value_cents: returnValue,
-      exchange_value_cents: exchangeValue,
-      net_cash_cents: netCash,
+      net_cash_cents: returnValue,
     };
   });
+}
+
+/**
+ * Recent returns for the transaction-history timeline, each joined to its
+ * original sale code and the customer it was attributed to (via the sale).
+ */
+export async function listRecentReturns(limit = 50): Promise<ReturnRow[]> {
+  const db = await getDb();
+  return db.select<ReturnRow[]>(
+    `SELECT r.id, r.code, r.original_sale_id, r.kind,
+            r.return_value_cents, r.exchange_value_cents, r.net_cash_cents,
+            r.note, r.created_at,
+            s.code AS original_sale_code,
+            c.name AS customer_name
+       FROM returns r
+       LEFT JOIN sales s     ON s.id = r.original_sale_id
+       LEFT JOIN customers c ON c.id = s.customer_id
+      ORDER BY r.id DESC
+      LIMIT $1`,
+    [limit],
+  );
 }
