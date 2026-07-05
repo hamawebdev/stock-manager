@@ -84,7 +84,7 @@ export function computeSaleTotals(
 
 /** Allocate the next year-scoped invoice code, e.g. `FAC-2026-0031`. */
 async function nextSaleCode(db: Database): Promise<string> {
-  const prefix = (await getSetting("sale_code_prefix")) || "FAC";
+  const prefix = (await getSetting("sale_code_prefix", db)) || "FAC";
   const year = new Date().getFullYear();
   const like = `${prefix}-${year}-%`;
   const [{ n }] = await db.select<{ n: number }[]>(

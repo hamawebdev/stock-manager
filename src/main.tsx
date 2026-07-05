@@ -8,6 +8,15 @@ import { Toaster } from "@/components/ui/sonner";
 import Layout from "@/components/layout";
 import i18n, { dirFor } from "@/lib/i18n";
 import { useAppStore } from "@/store/use-app-store";
+// Self-hosted fonts (bundled, work offline in the Tauri app): Geist Variable for
+// Latin/default UI, IBM Plex Sans Arabic when the app language is Arabic. Each
+// per-weight Arabic file ships all subsets but the browser only downloads the
+// ones actually used (unicode-range), so bundling 400–700 stays cheap.
+import "@fontsource-variable/geist";
+import "@fontsource/ibm-plex-sans-arabic/400.css";
+import "@fontsource/ibm-plex-sans-arabic/500.css";
+import "@fontsource/ibm-plex-sans-arabic/600.css";
+import "@fontsource/ibm-plex-sans-arabic/700.css";
 import "@/index.css";
 
 // Apply the persisted language/direction synchronously before the first paint so

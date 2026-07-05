@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    atelier_lib::run()
+    stock_manager_lib::run()
 }

@@ -204,29 +204,28 @@ function PaymentCenter() {
         cartHasItems={lines.length > 0}
       />
 
-      {/* Workspace — fixed 3-column POS layout: products | cart | payment.
-          Selling and returns share the same cart + payment panel. Each column
-          scrolls internally so the page never scrolls and the Charge button in
-          the payment column stays in view. Below lg it collapses to a single
-          scrolling stack (graceful fallback for narrow screens). */}
+      {/* Workspace — POS layout: products | cart | payment. On lg+ it's a fixed
+          3-column row; below lg it stacks into 3 equal rows. Either way the grid
+          is bounded to the viewport (grid rows give each panel a definite height)
+          and every panel scrolls internally, so the page never scrolls and the
+          Charge button in the payment panel stays pinned and in view at any width. */}
       <div className="min-h-0 flex-1">
-        <div className="grid h-full min-h-0 grid-cols-1 gap-3 overflow-auto lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)_320px] lg:overflow-hidden xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)_360px]">
+        <div className="grid h-full min-h-0 grid-cols-1 grid-rows-3 gap-3 overflow-hidden lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)_320px] lg:grid-rows-1 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)_360px]">
           {/* Products */}
-          <Card className="h-[45vh] min-h-0 overflow-hidden p-3 lg:h-full">
+          <Card className="min-h-0 overflow-hidden p-3">
             <ProductBrowser
               onAddVariant={handleAddVariant}
               scannerEnabled={!anySheetOpen}
             />
           </Card>
           {/* Cart */}
-          <Card className="flex h-[45vh] min-h-0 flex-col overflow-hidden p-0 lg:h-full">
+          <Card className="flex min-h-0 flex-col overflow-hidden p-0">
             <CartPanel />
           </Card>
-          {/* Payment — totals, amount paid, and a pinned Charge button.
-               Explicit h-[55vh] at small screens gives the card a bounded
-               height so PaymentPanel's flex-col h-full resolves, keeping
-               the Charge button pinned without any page scroll. */}
-          <Card className="flex h-[55vh] min-h-0 flex-col overflow-hidden p-3 lg:h-full">
+          {/* Payment — totals, amount paid, and a pinned Charge button. The grid
+               row bounds the card height so PaymentPanel's flex-col h-full
+               resolves, keeping the Charge button pinned without page scroll. */}
+          <Card className="flex min-h-0 flex-col overflow-hidden p-3">
             <PaymentPanel onOpenCustomer={() => setCustomerOpen(true)} />
           </Card>
         </div>

@@ -7,6 +7,7 @@ import { PanelLeftIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useDirection } from '@/components/ui/direction';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -153,7 +154,7 @@ function SidebarProvider({
 }
 
 function Sidebar({
-  side = 'left',
+  side: sideProp = 'left',
   variant = 'sidebar',
   collapsible = 'offcanvas',
   className,
@@ -166,6 +167,17 @@ function Sidebar({
 }) {
   const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
   const { t } = useTranslation();
+  const direction = useDirection();
+
+  // The sidebar is positioned with physical `left-0` / `right-0`, which do not
+  // flip for RTL. Mirror the requested side under RTL so the sidebar sits on the
+  // reading-start edge (right for Arabic) and stays aligned with the flex gap.
+  const side =
+    direction === 'rtl'
+      ? sideProp === 'left'
+        ? 'right'
+        : 'left'
+      : sideProp;
 
   if (collapsible === 'none') {
     return (
@@ -514,6 +526,7 @@ function SidebarMenuButton({
 } & VariantProps<typeof sidebarMenuButtonVariants>) {
   const Comp = asChild ? Slot : 'button';
   const { isMobile, state } = useSidebar();
+  const direction = useDirection();
 
   const button = (
     <Comp
@@ -540,7 +553,7 @@ function SidebarMenuButton({
     <Tooltip>
       <TooltipTrigger asChild>{button}</TooltipTrigger>
       <TooltipContent
-        side="right"
+        side={direction === 'rtl' ? 'left' : 'right'}
         align="center"
         hidden={state !== 'collapsed' || isMobile}
         {...tooltip}

@@ -305,14 +305,20 @@ export default function PurchasingPage() {
         </div>
       </div>
 
-      {/* Body: grid + cart */}
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[1fr_440px]">
-        <div className="min-h-0 rounded-xl border p-3">
+      {/* Body: product grid + cart. Bounded to the viewport (grid rows give each
+          side a definite height) so both sides scroll internally and the cart's
+          footer actions stay pinned. On lg+ it's two columns; below lg it stacks
+          into two rows: the product grid takes the free space while the cart row
+          is floored at 17rem — enough for its taller footer (totals + terms +
+          the two action buttons) so those never get clipped on short/narrow
+          windows, while the line-item list keeps scrolling internally. */}
+      <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1fr)_minmax(17rem,1fr)] gap-4 lg:grid-cols-[1fr_440px] lg:grid-rows-1">
+        <div className="min-h-0 overflow-hidden rounded-xl border p-3">
           <PurchaseProductGrid onPick={addVariant} />
         </div>
 
         {/* Cart */}
-        <div className="flex min-h-0 flex-col rounded-xl border">
+        <div className="flex min-h-0 flex-col overflow-hidden rounded-xl border">
           <div className="flex items-center justify-between border-b px-4 py-3">
             <p className="font-semibold">
               {t("purchasing.details")}{" "}

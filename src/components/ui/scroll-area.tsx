@@ -16,7 +16,13 @@ function ScrollArea({
     >
       <ScrollAreaPrimitive.Viewport
         data-slot="scroll-area-viewport"
-        className="size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1"
+        // Radix wraps children in a `display:table; min-width:100%` element so it
+        // can measure content for horizontal scrolling. That table box sizes to
+        // its intrinsic content width, which defeats `min-w-0`/`truncate` on flex
+        // children and lets rows overflow their column (clipping right-aligned
+        // content like a cart line's total). All our scroll areas are vertical,
+        // so force that wrapper to a plain block bounded by the viewport width.
+        className="size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1 [&>div]:!block [&>div]:!min-w-0"
       >
         {children}
       </ScrollAreaPrimitive.Viewport>

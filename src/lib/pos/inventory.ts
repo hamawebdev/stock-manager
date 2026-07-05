@@ -3,8 +3,7 @@
  * row and updates the materialized `variants.stock` in the same transaction,
  * so the running total always matches the sum of deltas.
  */
-import type Database from "@tauri-apps/plugin-sql";
-import { getDb, withTx } from "./db";
+import { getDb, withTx, type Db } from "./db";
 import type { InventoryMovement, MovementReason } from "./types";
 
 export interface MovementInput {
@@ -23,7 +22,7 @@ export interface MovementInput {
  * standalone, self-contained change.
  */
 export async function applyMovement(
-  db: Database,
+  db: Db,
   m: MovementInput,
 ): Promise<void> {
   await db.execute(

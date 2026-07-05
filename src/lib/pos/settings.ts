@@ -1,5 +1,5 @@
 /** Shop settings: a typed view over the `settings` key/value table. */
-import { getDb } from "./db";
+import { getDb, type Db } from "./db";
 import type { CurrencyConfig } from "@/lib/money";
 import type { ShopSettings } from "./types";
 
@@ -44,10 +44,17 @@ export async function getSettings(): Promise<ShopSettings> {
   };
 }
 
-/** Read a single raw setting value, or null when unset. */
-export async function getSetting(key: string): Promise<string | null> {
-  const db = await getDb();
-  const rows = await db.select<{ value: string | null }[]>(
+/**
+ * Read a single raw setting value, or null when unset. Pass `db` when calling
+ * from inside a `withTx` so the read shares the transaction's connection
+ * instead of enqueuing behind it (which would deadlock).
+ */
+export async function getSetting(
+  key: string,
+  db?: Db,
+): Promise<string | null> {
+  const conn = db ?? (await getDb());
+  const rows = await conn.select<{ value: string | null }[]>(
     "SELECT value FROM settings WHERE key = $1",
     [key],
   );

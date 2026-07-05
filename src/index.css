@@ -63,6 +63,12 @@
 }
 
 @theme inline {
+  --font-sans:
+    "Geist Variable", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-arabic:
+    "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -98,6 +104,15 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+  }
+  html {
+    font-family: var(--font-sans);
+  }
+  /* When the app switches to Arabic, main.tsx sets lang="ar" on <html>; render
+     the whole UI (including Radix portals, which mount under <html>) in IBM Plex
+     Sans Arabic. Everything else keeps Geist Variable. */
+  html[lang="ar"] {
+    font-family: var(--font-arabic);
   }
   body {
     @apply bg-background text-foreground;
