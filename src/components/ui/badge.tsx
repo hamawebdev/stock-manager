@@ -13,11 +13,27 @@ const badgeVariants = cva(
         secondary:
           "bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90",
         destructive:
-          "bg-destructive text-white focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40 [a&]:hover:bg-destructive/90",
+          "bg-destructive text-destructive-foreground focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 [a&]:hover:bg-destructive/90",
+        success:
+          "bg-success text-success-foreground [a&]:hover:bg-success/90",
+        warning:
+          "bg-warning text-warning-foreground [a&]:hover:bg-warning/90",
+        info: "bg-info text-info-foreground [a&]:hover:bg-info/90",
         outline:
           "border-border text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
         ghost: "[a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
         link: "text-primary underline-offset-4 [a&]:hover:underline",
+        /* Soft/tinted status pills — best for at-a-glance status recognition. */
+        "soft-primary":
+          "bg-primary-soft text-primary-soft-foreground [a&]:hover:bg-primary-soft/80",
+        "soft-success":
+          "bg-success-soft text-success-soft-foreground [a&]:hover:bg-success-soft/80",
+        "soft-warning":
+          "bg-warning-soft text-warning-soft-foreground [a&]:hover:bg-warning-soft/80",
+        "soft-info":
+          "bg-info-soft text-info-soft-foreground [a&]:hover:bg-info-soft/80",
+        "soft-destructive":
+          "bg-destructive-soft text-destructive-soft-foreground [a&]:hover:bg-destructive-soft/80",
       },
     },
     defaultVariants: {

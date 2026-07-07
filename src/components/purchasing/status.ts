@@ -1,14 +1,17 @@
 import type { PurchaseStatus } from "@/lib/pos/types";
 
-/** Map a purchase status to a Badge variant for consistent colouring. */
+/**
+ * Map a purchase status to a Badge variant for consistent, at-a-glance
+ * colouring: confirmed → green, cancelled → red, draft → neutral gray.
+ */
 export function statusBadgeVariant(
   status: PurchaseStatus,
-): "default" | "secondary" | "destructive" | "outline" {
+): "soft-success" | "soft-destructive" | "secondary" {
   switch (status) {
     case "confirmed":
-      return "default";
+      return "soft-success";
     case "cancelled":
-      return "destructive";
+      return "soft-destructive";
     default:
       return "secondary"; // draft
   }

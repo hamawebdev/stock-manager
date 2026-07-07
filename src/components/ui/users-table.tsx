@@ -60,7 +60,7 @@ export const UsersTable = memo(({ onAddUser }: UsersTableProps) => {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 text-sm text-green-500">
+          <div className="flex items-center gap-1 text-sm text-success">
             <TrendingUp className="h-4 w-4" />
             <span>+12%</span>
           </div>
@@ -92,7 +92,7 @@ export const UsersTable = memo(({ onAddUser }: UsersTableProps) => {
                 />
                 <div
                   className={`border-background absolute -right-1 -bottom-1 h-3 w-3 rounded-full border-2 ${
-                    user.status === 'active' ? 'bg-green-500' : 'bg-red-500'
+                    user.status === 'active' ? 'bg-success' : 'bg-destructive'
                   }`}
                 />
               </div>
@@ -103,10 +103,10 @@ export const UsersTable = memo(({ onAddUser }: UsersTableProps) => {
                   <span
                     className={`rounded-full px-2 py-1 text-xs font-medium ${
                       user.role === 'Admin'
-                        ? 'bg-purple-500/10 text-purple-500'
+                        ? 'bg-info-soft text-info-soft-foreground'
                         : user.role === 'Moderator'
-                          ? 'bg-blue-500/10 text-blue-500'
-                          : 'bg-gray-500/10 text-gray-500'
+                          ? 'bg-primary-soft text-primary-soft-foreground'
+                          : 'bg-muted text-muted-foreground'
                     }`}
                   >
                     {user.role}

@@ -65,7 +65,7 @@ export function ExpenseDashboard({ filters }: Props) {
       </div>
 
       {due.length > 0 && (
-        <Card className="border-amber-500/40">
+        <Card className="border-warning/40">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <CalendarClock className="size-4" />

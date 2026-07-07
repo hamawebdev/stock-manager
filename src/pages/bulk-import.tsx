@@ -210,7 +210,7 @@ export default function BulkImportPage() {
           <div className="flex items-center justify-between">
             <p className="text-sm">
               <span className="font-medium">{rows.length}</span> {t("bulkImport.rows")} ·{" "}
-              <span className="text-green-600">{t("bulkImport.validCount", { count: validCount })}</span>
+              <span className="text-success">{t("bulkImport.validCount", { count: validCount })}</span>
               {rows.length - validCount > 0 && (
                 <span className="text-destructive">
                   {" "}
@@ -224,8 +224,8 @@ export default function BulkImportPage() {
           </div>
 
           {done && (
-            <div className="flex items-center gap-2 rounded-md border border-green-600/30 bg-green-600/10 px-3 py-2 text-sm">
-              <CheckCircle2 className="size-4 text-green-600" />
+            <div className="flex items-center gap-2 rounded-md border border-success/30 bg-success/10 px-3 py-2 text-sm">
+              <CheckCircle2 className="size-4 text-success" />
               {done.failed > 0
                 ? t("bulkImport.doneWithFailures", { created: done.created, failed: done.failed })
                 : t("bulkImport.done", { created: done.created })}

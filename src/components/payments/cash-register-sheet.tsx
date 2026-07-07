@@ -242,7 +242,7 @@ function OpenSessionView({
             {variance != null && (
               <p
                 className={`text-sm font-medium ${
-                  variance === 0 ? "text-emerald-600" : "text-destructive"
+                  variance === 0 ? "text-success" : "text-destructive"
                 }`}
               >
                 {t("payments.cash.variance")}: {variance > 0 ? "+" : ""}

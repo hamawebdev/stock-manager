@@ -65,7 +65,7 @@ export function VariantPicker({ productId, productName, onPick, onClose }: Props
                     <span>{variantLabel(v) || v.sku}</span>
                   </span>
                   <span className="flex items-center gap-2">
-                    <Badge variant={out ? "destructive" : "secondary"}>
+                    <Badge variant={out ? "destructive" : "success"}>
                       {v.stock}
                     </Badge>
                     {formatMoney(v.effective_price_cents, currency)}

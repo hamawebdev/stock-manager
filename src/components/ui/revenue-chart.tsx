@@ -6,12 +6,12 @@ import { Button } from '@/components/ui/button';
 import { BarChart3, Calendar } from 'lucide-react';
 
 const chartData = [
-  { month: 'Jan', value: 4000, growth: 12, color: 'bg-blue-500' },
-  { month: 'Feb', value: 3000, growth: -8, color: 'bg-red-500' },
-  { month: 'Mar', value: 5000, growth: 25, color: 'bg-green-500' },
-  { month: 'Apr', value: 4500, growth: 15, color: 'bg-yellow-500' },
-  { month: 'May', value: 6000, growth: 33, color: 'bg-purple-500' },
-  { month: 'Jun', value: 5500, growth: 22, color: 'bg-cyan-500' },
+  { month: 'Jan', value: 4000, growth: 12, color: 'bg-primary' },
+  { month: 'Feb', value: 3000, growth: -8, color: 'bg-destructive' },
+  { month: 'Mar', value: 5000, growth: 25, color: 'bg-success' },
+  { month: 'Apr', value: 4500, growth: 15, color: 'bg-warning' },
+  { month: 'May', value: 6000, growth: 33, color: 'bg-info' },
+  { month: 'Jun', value: 5500, growth: 22, color: 'bg-primary/70' },
 ];
 
 export const RevenueChart = memo(() => {
@@ -20,7 +20,7 @@ export const RevenueChart = memo(() => {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h3 className="flex items-center gap-2 text-lg font-semibold">
-            <BarChart3 className="h-5 w-5 text-green-500" />
+            <BarChart3 className="h-5 w-5 text-success" />
             Revenue Analytics
           </h3>
           <p className="text-muted-foreground text-sm">
@@ -53,7 +53,7 @@ export const RevenueChart = memo(() => {
                     ${item.value.toLocaleString()}
                   </div>
                   <div
-                    className={`text-xs ${item.growth > 0 ? 'text-green-500' : 'text-red-500'}`}
+                    className={`text-xs ${item.growth > 0 ? 'text-success' : 'text-destructive'}`}
                   >
                     {item.growth > 0 ? '+' : ''}
                     {item.growth}%
@@ -71,15 +71,15 @@ export const RevenueChart = memo(() => {
       {/* Summary Stats */}
       <div className="border-border/50 grid grid-cols-3 gap-4 border-t pt-4">
         <div className="text-center">
-          <div className="text-2xl font-bold text-green-500">$27K</div>
+          <div className="text-2xl font-bold text-success">$27K</div>
           <div className="text-muted-foreground text-xs">Total Revenue</div>
         </div>
         <div className="text-center">
-          <div className="text-2xl font-bold text-blue-500">+18%</div>
+          <div className="text-2xl font-bold text-primary">+18%</div>
           <div className="text-muted-foreground text-xs">Growth Rate</div>
         </div>
         <div className="text-center">
-          <div className="text-2xl font-bold text-purple-500">$4.5K</div>
+          <div className="text-2xl font-bold text-info">$4.5K</div>
           <div className="text-muted-foreground text-xs">Average</div>
         </div>
       </div>

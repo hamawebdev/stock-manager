@@ -49,7 +49,7 @@ export function InsightsStrip({ onOpenCash }: { onOpenCash: () => void }) {
       <Item icon={User} label={t("payments.insights.cashier")} value={open?.cashier_name || "—"} />
       <button onClick={onOpenCash} className="flex items-center gap-1.5">
         <CircleDot
-          className={`size-4 ${open ? "text-green-600" : "text-muted-foreground"}`}
+          className={`size-4 ${open ? "text-success" : "text-muted-foreground"}`}
         />
         <span className="text-muted-foreground">{t("payments.insights.register")}</span>
         <span className="font-medium">{open ? t("payments.insights.open") : t("payments.insights.closed")}</span>

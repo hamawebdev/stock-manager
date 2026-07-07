@@ -39,10 +39,13 @@ function stockStatus(
   return "in";
 }
 
-const STATUS_VARIANT: Record<StockStatus, "secondary" | "destructive" | "outline"> = {
-  in: "secondary",
-  low: "outline",
-  out: "destructive",
+const STATUS_VARIANT: Record<
+  StockStatus,
+  "soft-success" | "soft-warning" | "soft-destructive"
+> = {
+  in: "soft-success",
+  low: "soft-warning",
+  out: "soft-destructive",
 };
 
 const STATUS_LABEL_KEY: Record<StockStatus, "bestSellers.status.in" | "bestSellers.status.low" | "bestSellers.status.out"> = {

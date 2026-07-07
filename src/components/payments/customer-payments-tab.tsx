@@ -235,7 +235,7 @@ export function CustomerPaymentsTab({ customer }: { customer: Customer }) {
                   <TableCell
                     className={cn(
                       "text-end font-medium",
-                      p.amount_cents < 0 && "text-emerald-600 dark:text-emerald-500",
+                      p.amount_cents < 0 && "text-success",
                     )}
                   >
                     {money(p.amount_cents)}

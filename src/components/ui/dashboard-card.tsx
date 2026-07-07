@@ -40,8 +40,8 @@ export const DashboardCard = memo(({ stat, index }: DashboardCardProps) => {
             <div
               className={`flex items-center gap-1 text-sm font-medium ${
                 stat.changeType === 'positive'
-                  ? 'text-green-500'
-                  : 'text-red-500'
+                  ? 'text-success'
+                  : 'text-destructive'
               }`}
             >
               <TrendingUp

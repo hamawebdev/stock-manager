@@ -116,7 +116,7 @@ export function ProductBrowser({ onAddVariant, scannerEnabled = true }: Props) {
                   <span className="text-muted-foreground">{variantLabel(v)}</span>
                 </span>
                 <span className="flex items-center gap-2">
-                  <Badge variant={v.stock <= 0 ? "destructive" : "secondary"}>
+                  <Badge variant={v.stock <= 0 ? "destructive" : "success"}>
                     {v.stock}
                   </Badge>
                   {formatMoney(v.effective_price_cents, currency)}
@@ -240,7 +240,7 @@ function ProductCard({
           </div>
         )}
         <Badge
-          variant={out ? "destructive" : "secondary"}
+          variant={out ? "destructive" : "success"}
           className="absolute top-1 end-1"
         >
           {product.total_stock}

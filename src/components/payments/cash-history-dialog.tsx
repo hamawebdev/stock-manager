@@ -48,7 +48,7 @@ export function CashHistoryDialog({
                 const variance = s.variance_cents ?? 0;
                 const varianceClass =
                   variance === 0
-                    ? "text-emerald-600"
+                    ? "text-success"
                     : "text-destructive";
                 return (
                   <div key={s.id} className="rounded-md border p-3 text-sm">

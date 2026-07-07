@@ -11,7 +11,7 @@ const toneClass: Record<NonNullable<SummaryCard["tone"]>, string> = {
   default: "text-foreground",
   primary: "text-primary",
   danger: "text-destructive",
-  success: "text-emerald-600 dark:text-emerald-500",
+  success: "text-success",
 };
 
 /** The KPI row shown atop the supplier tabs and the purchase detail. */

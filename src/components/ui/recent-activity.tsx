@@ -10,28 +10,28 @@ const activities = [
     user: 'john@example.com',
     time: '2 min ago',
     icon: User,
-    color: 'text-blue-500',
+    color: 'text-info',
   },
   {
     action: 'Data export',
     user: 'admin',
     time: '5 min ago',
     icon: Download,
-    color: 'text-green-500',
+    color: 'text-success',
   },
   {
     action: 'Settings updated',
     user: 'admin',
     time: '10 min ago',
     icon: Settings,
-    color: 'text-orange-500',
+    color: 'text-warning',
   },
   {
     action: 'New user registered',
     user: 'sarah@example.com',
     time: '15 min ago',
     icon: Users,
-    color: 'text-purple-500',
+    color: 'text-info',
   },
 ];
 

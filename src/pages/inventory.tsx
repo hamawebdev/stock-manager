@@ -241,7 +241,7 @@ export default function InventoryPage() {
                 </TableCell>
                 <TableCell className="text-end">{p.variant_count}</TableCell>
                 <TableCell className="text-end">
-                  <Badge variant={p.total_stock <= 0 ? "destructive" : "secondary"}>
+                  <Badge variant={p.total_stock <= 0 ? "destructive" : "success"}>
                     {p.total_stock}
                   </Badge>
                 </TableCell>
