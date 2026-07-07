@@ -49,6 +49,23 @@ export function getRawDb(): Promise<Database> {
 }
 
 /**
+ * Re-assert the per-connection PRAGMAs on whatever pooled connection this call
+ * lands on. plugin-sql runs each statement against the sqlx pool, which recycles
+ * connections (idle_timeout 10m / max_lifetime 30m); a recycled connection loses
+ * `busy_timeout` (reverts to 0, so a transient lock fails instantly with
+ * "database is locked") and `foreign_keys` (constraints silently stop being
+ * enforced). `journal_mode = WAL` is persisted in the database file, so it never
+ * needs re-asserting. Must run inside a `serialize` slot so it targets the same
+ * connection as the write that follows.
+ */
+export async function ensureConnPragmas(
+  db: Pick<Database, "execute">,
+): Promise<void> {
+  await db.execute("PRAGMA busy_timeout = 5000");
+  await db.execute("PRAGMA foreign_keys = ON");
+}
+
+/**
  * The shared database handle for all standalone reads and writes. Every
  * `execute`/`select` runs through the serialization queue (see `serialize`).
  */
@@ -56,7 +73,12 @@ export async function getDb(): Promise<Db> {
   const db = await loadRaw();
   return {
     execute: (query, bindValues) =>
-      serialize(() => db.execute(query, bindValues)),
+      serialize(async () => {
+        // Guard standalone writes against a pool connection that was recycled
+        // (and so reverted to busy_timeout=0 / foreign_keys=off) since load.
+        await ensureConnPragmas(db);
+        return db.execute(query, bindValues);
+      }),
     select<T>(query: string, bindValues?: unknown[]): Promise<T> {
       return serialize(() => db.select<T>(query, bindValues));
     },

@@ -1,5 +1,5 @@
 import type Database from "@tauri-apps/plugin-sql";
-import { getRawDb, serialize } from "@/lib/db";
+import { ensureConnPragmas, getRawDb, serialize } from "@/lib/db";
 
 export { getDb } from "@/lib/db";
 export type { Db } from "@/lib/db";
@@ -29,6 +29,13 @@ export async function withTx<T>(
 ): Promise<T> {
   const db = await getRawDb();
   return serialize(async () => {
+    // The pooled connection may have been recycled by sqlx since load, dropping
+    // busy_timeout (→ 0) and foreign_keys. Re-assert them before BEGIN so the
+    // whole transaction has a lock timeout (no instant "database is locked") and
+    // FK enforcement. foreign_keys is a no-op inside a transaction, so it must
+    // precede BEGIN. This slot owns the single connection, so these PRAGMAs and
+    // every statement below run on the same one.
+    await ensureConnPragmas(db);
     await db.execute("BEGIN IMMEDIATE");
     try {
       const result = await fn(db);
