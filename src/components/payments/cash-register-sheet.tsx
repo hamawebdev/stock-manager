@@ -74,24 +74,11 @@ export function CashRegisterSheet({
 
 function OpenRegisterForm({ onShowHistory }: { onShowHistory: () => void }) {
   const { t } = useTranslation();
-  const currency = useCurrency();
   const openSession = useOpenCashSession();
-  const [floatStr, setFloatStr] = useState("");
-  const [cashier, setCashier] = useState("");
-  const [note, setNote] = useState("");
 
   async function handleOpen() {
-    const cents = parseMoney(floatStr || "0", currency.decimals);
-    if (cents == null) {
-      toast.error(t("payments.cash.invalidAmount"));
-      return;
-    }
     try {
-      await openSession.mutateAsync({
-        floatCents: cents,
-        cashierName: cashier,
-        openingNote: note,
-      });
+      await openSession.mutateAsync({ floatCents: 0 });
       toast.success(t("payments.cash.registerOpened"));
     } catch (err) {
       toast.error(String(err));
@@ -100,36 +87,6 @@ function OpenRegisterForm({ onShowHistory }: { onShowHistory: () => void }) {
 
   return (
     <div className="grid gap-4">
-      <div className="grid gap-2">
-        <Label htmlFor="cashier">{t("payments.insights.cashier")}</Label>
-        <Input
-          id="cashier"
-          value={cashier}
-          onChange={(e) => setCashier(e.target.value)}
-          placeholder={t("payments.cash.cashierPlaceholder")}
-        />
-      </div>
-      <div className="grid gap-2">
-        <Label htmlFor="float">
-          {t("payments.cash.openingFloat")}{currency.symbol ? ` (${currency.symbol})` : ""}
-        </Label>
-        <Input
-          id="float"
-          inputMode="decimal"
-          value={floatStr}
-          onChange={(e) => setFloatStr(e.target.value)}
-          placeholder="0.00"
-        />
-      </div>
-      <div className="grid gap-2">
-        <Label htmlFor="open-note">{t("payments.cash.openingNote")}</Label>
-        <Textarea
-          id="open-note"
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          placeholder={t("payments.cash.openingNotePlaceholder")}
-        />
-      </div>
       <Button onClick={handleOpen} disabled={openSession.isPending}>
         <Wallet /> {t("payments.cash.openRegister")}
       </Button>
@@ -239,7 +196,7 @@ function OpenSessionView({
       </p>
 
       <div className="space-y-2 rounded-md border p-3">
-        <Row label={t("payments.cash.openingFloat")} value={fmt(b?.opening_float_cents)} />
+        <p className="text-sm font-semibold">{t("payments.cash.sessionSummary")}</p>
         <Row label={t("payments.cash.totalCashCollected")} value={fmt(b?.cash_collected_cents)} />
         <div className="flex items-center justify-between border-t pt-2">
           <span className="font-semibold">{t("payments.cash.theoreticalTotal")}</span>
@@ -263,7 +220,10 @@ function OpenSessionView({
         <div className="grid gap-3 rounded-md border p-3">
           <p className="text-sm font-medium">{t("payments.cash.closeReconcile")}</p>
           <div className="grid gap-2">
-            <Label>{t("payments.cash.countedTotal")}</Label>
+            <Label>
+              {t("payments.cash.countedTotal")}
+              {currency.symbol ? ` (${currency.symbol})` : ""}
+            </Label>
             <Input
               inputMode="decimal"
               value={counted}

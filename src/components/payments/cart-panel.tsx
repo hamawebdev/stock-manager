@@ -3,7 +3,7 @@
  * permission-gated price override, an optional note, and remove. Reuses the
  * shared cart store and its pure total helpers.
  */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +37,7 @@ import { formatMoney, parseMoney } from "@/lib/money";
 import { variantLabel } from "@/lib/pos/labels";
 import { productImageSrc } from "@/lib/images";
 import { cn } from "@/lib/utils";
+import { usePosUiStore } from "@/store/use-pos-ui-store";
 import { useManagerGate } from "./manager-gate";
 
 /** Collapse/fade duration for the row removal animation (ms). */
@@ -66,11 +67,29 @@ export function CartPanel() {
   const returnMode = useCartStore((s) => s.returnMode);
   const originalSaleId = useCartStore((s) => s.originalSaleId);
 
-  // Which line is selected (for the Delete/Backspace shortcut and highlight),
-  // which lines are mid-exit-animation, and any modified line pending a confirm.
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  // Which line is selected (for keyboard nav / qty / edit / Delete and the
+  // highlight) lives in the shared POS-UI store so the global hotkey handler
+  // and this panel stay in sync. Local state tracks lines mid-exit-animation
+  // and any modified line pending a remove confirm.
+  const selectedId = usePosUiStore((s) => s.selectedLineId);
+  const setSelectedId = usePosUiStore((s) => s.setSelectedLineId);
   const [removingIds, setRemovingIds] = useState<Set<number>>(new Set());
   const [confirmLine, setConfirmLine] = useState<CartLine | null>(null);
+  const listRef = useRef<HTMLUListElement>(null);
+
+  // Drop a stale selection when its line leaves the cart (clear/resume/return
+  // reload), and keep the selected line scrolled into view during keyboard nav.
+  useEffect(() => {
+    if (selectedId != null && !lines.some((l) => l.variant.id === selectedId)) {
+      setSelectedId(null);
+      return;
+    }
+    if (selectedId != null) {
+      listRef.current
+        ?.querySelector(`[data-cart-line="${selectedId}"]`)
+        ?.scrollIntoView({ block: "nearest" });
+    }
+  }, [selectedId, lines, setSelectedId]);
 
   // Actually remove a line: play the collapse animation, then commit to the
   // store. Totals, Change, Amount Paid and the Charge button all derive from
@@ -95,11 +114,13 @@ export function CartPanel() {
           next.delete(variantId);
           return next;
         });
-        setSelectedId((cur) => (cur === variantId ? nextSelected : cur));
+        if (usePosUiStore.getState().selectedLineId === variantId) {
+          setSelectedId(nextSelected);
+        }
         toast.success(t("payments.cart.itemRemoved"));
       }, REMOVE_ANIM_MS);
     },
-    [lines, removeLine, t],
+    [lines, removeLine, setSelectedId, t],
   );
 
   // Entry point for every removal (button click or keyboard). Modified sale
@@ -165,10 +186,11 @@ export function CartPanel() {
         </div>
       ) : (
         <ScrollArea className="min-h-0 flex-1 overflow-hidden">
-          <ul className="divide-y">
+          <ul className="divide-y" ref={listRef}>
             {lines.map((l) => (
               <li
                 key={l.variant.id}
+                data-cart-line={l.variant.id}
                 onClick={() => setSelectedId(l.variant.id)}
                 aria-selected={selectedId === l.variant.id}
                 className={cn(
@@ -217,8 +239,12 @@ export function CartPanel() {
                     </span>
                   </div>
 
-                  {/* Controls row: qty stepper · unit price · line actions */}
-                  <div className="flex items-center gap-2">
+                  {/* Controls row: qty stepper · unit price · line actions.
+                      Wraps when the cart column is too narrow to hold the qty
+                      stepper, price and every action button on one line, so the
+                      trailing actions (incl. remove) drop to a second line
+                      instead of overflowing under the line's overflow-hidden. */}
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
                     <div className="flex items-center gap-1">
                       <Button
                         variant="outline"
@@ -252,11 +278,13 @@ export function CartPanel() {
                         <>
                           <PriceEditor line={l} />
                           <NotePopover line={l} />
-                          <DiscountPopover
-                            value={l.discount}
-                            onChange={(d) => setLineDiscount(l.variant.id, d)}
-                            label="—"
-                          />
+                          <span data-line-action="discount">
+                            <DiscountPopover
+                              value={l.discount}
+                              onChange={(d) => setLineDiscount(l.variant.id, d)}
+                              label="—"
+                            />
+                          </span>
                         </>
                       )}
                       <Button
@@ -383,7 +411,12 @@ function PriceEditor({ line }: { line: CartLine }) {
   return (
     <Popover open={open} onOpenChange={(o) => (o ? openEditor() : setOpen(false))}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon-sm" title={t("payments.cart.editPrice")}>
+        <Button
+          data-line-action="price"
+          variant="ghost"
+          size="icon-sm"
+          title={t("payments.cart.editPrice")}
+        >
           <Pencil />
         </Button>
       </PopoverTrigger>
@@ -413,6 +446,7 @@ function NotePopover({ line }: { line: CartLine }) {
     <Popover>
       <PopoverTrigger asChild>
         <Button
+          data-line-action="note"
           variant={line.note ? "secondary" : "ghost"}
           size="icon-sm"
           title={t("payments.cart.lineNote")}

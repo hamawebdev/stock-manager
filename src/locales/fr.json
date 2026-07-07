@@ -466,16 +466,17 @@
       "short": "manque",
       "registerClosed": "Caisse clôturée — {{label}} {{amount}}",
       "openedAt": "Ouverte le {{datetime}}",
-      "totalCashCollected": "Total des espèces encaissées",
-      "theoreticalTotal": "Total théorique",
+      "sessionSummary": "Résumé de la session",
+      "totalCashCollected": "Total espèces encaissées",
+      "theoreticalTotal": "Total théorique en caisse",
       "payIn": "Encaissement",
       "payOut": "Décaissement",
       "closeRegister": "Clôturer la caisse",
       "closeReconcile": "Clôturer et rapprocher",
-      "countedTotal": "Total compté",
+      "countedTotal": "Montant total compté en caisse",
       "useCashCounter": "Utiliser le compteur de caisse",
-      "variance": "Écart",
-      "closingNote": "Note de clôture (optionnel)",
+      "variance": "Écart de caisse",
+      "closingNote": "Note de fermeture (optionnel)",
       "closingNotePlaceholder": "Expliquer un écart, un incident…",
       "amount": "Montant",
       "reason": "Motif",
@@ -525,6 +526,23 @@
       "paymentAdded": "Versement enregistré",
       "paymentDeleted": "Versement supprimé",
       "manage": "Gérer le compte"
+    },
+    "shortcuts": {
+      "title": "Raccourcis clavier",
+      "subtitle": "Utilisez la caisse sans quitter le clavier.",
+      "charge": "Encaisser / Rembourser",
+      "selectLine": "Sélectionner une ligne",
+      "qty": "Modifier la quantité",
+      "discount": "Remise sur la ligne",
+      "focusSearch": "Rechercher un produit",
+      "escape": "Fermer / quitter le champ",
+      "help": "Afficher cette aide",
+      "groups": {
+        "register": "Caisse",
+        "checkout": "Paiement",
+        "cart": "Ligne du panier",
+        "navigation": "Navigation"
+      }
     }
   },
   "inventory": {

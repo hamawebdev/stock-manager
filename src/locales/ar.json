@@ -474,6 +474,7 @@
       "short": "نقص",
       "registerClosed": "تم إغلاق الصندوق — {{label}} {{amount}}",
       "openedAt": "فُتح في {{datetime}}",
+      "sessionSummary": "ملخص الجلسة",
       "totalCashCollected": "إجمالي النقد المحصّل",
       "theoreticalTotal": "الإجمالي النظري",
       "payIn": "إيداع",
@@ -533,6 +534,23 @@
       "paymentAdded": "تم تسجيل الدفعة",
       "paymentDeleted": "تم حذف الدفعة",
       "manage": "إدارة الحساب"
+    },
+    "shortcuts": {
+      "title": "اختصارات لوحة المفاتيح",
+      "subtitle": "تشغيل الصندوق دون استخدام الفأرة.",
+      "charge": "تحصيل / استرجاع",
+      "selectLine": "تحديد سطر السلة",
+      "qty": "تغيير الكمية",
+      "discount": "خصم على السطر",
+      "focusSearch": "البحث عن منتج",
+      "escape": "إغلاق / مغادرة الحقل",
+      "help": "عرض هذه المساعدة",
+      "groups": {
+        "register": "الصندوق",
+        "checkout": "الدفع",
+        "cart": "سطر السلة",
+        "navigation": "التنقل"
+      }
     }
   },
   "inventory": {

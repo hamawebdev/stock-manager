@@ -466,6 +466,7 @@
       "short": "short",
       "registerClosed": "Register closed — {{label}} {{amount}}",
       "openedAt": "Opened {{datetime}}",
+      "sessionSummary": "Session summary",
       "totalCashCollected": "Total cash collected",
       "theoreticalTotal": "Theoretical total",
       "payIn": "Pay in",
@@ -525,6 +526,23 @@
       "paymentAdded": "Payment recorded",
       "paymentDeleted": "Payment deleted",
       "manage": "Manage account"
+    },
+    "shortcuts": {
+      "title": "Keyboard shortcuts",
+      "subtitle": "Run the register without reaching for the mouse.",
+      "charge": "Charge / Refund",
+      "selectLine": "Select cart line",
+      "qty": "Change quantity",
+      "discount": "Line discount",
+      "focusSearch": "Focus product search",
+      "escape": "Close / leave field",
+      "help": "Show this help",
+      "groups": {
+        "register": "Register",
+        "checkout": "Checkout",
+        "cart": "Cart line",
+        "navigation": "Navigation"
+      }
     }
   },
   "inventory": {

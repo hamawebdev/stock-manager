@@ -6,7 +6,7 @@
  * account); walk-ins must pay in full. Reuses the cart store, the promotions
  * engine, and the existing sale/receipt/drawer pipeline.
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +46,7 @@ import {
   useCurrency,
   useSettings,
 } from "@/lib/pos/queries";
+import { usePosUiStore } from "@/store/use-pos-ui-store";
 import { useManagerGate } from "./manager-gate";
 import { applyPromotions } from "@/lib/pos/promotions";
 import { getCustomer } from "@/lib/pos/customers";
@@ -249,6 +250,20 @@ export function PaymentPanel({ onOpenCustomer, onCompleted }: Props) {
       toast.error(t("payments.returns.couldNotProcess", { error: String(err) }));
     }
   }
+
+  // Expose the primary settle action (Charge in sell mode, Refund in return
+  // mode) to the global F2 shortcut. A ref keeps the registered function stable
+  // while always calling the latest closure, so the listener never goes stale.
+  const submitRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    submitRef.current = returnMode ? confirmRefund : confirm;
+  });
+  const setSubmit = usePosUiStore((s) => s.setSubmit);
+  useEffect(() => {
+    const fn = () => submitRef.current();
+    setSubmit(fn);
+    return () => setSubmit(null);
+  }, [setSubmit]);
 
   // Return mode: refund-only settlement (single button, no tender/keypad).
   if (returnMode) {

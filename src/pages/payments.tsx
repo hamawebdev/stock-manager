@@ -18,6 +18,7 @@ import {
   useSettings,
 } from "@/lib/pos/queries";
 import { useCartStore } from "@/store/use-cart-store";
+import { usePosUiStore } from "@/store/use-pos-ui-store";
 import { listRecentSales, getSale, getSaleItems } from "@/lib/pos/sales";
 import { getVariantDetail } from "@/lib/pos/catalog";
 import { currencyFromSettings } from "@/lib/pos/settings";
@@ -35,6 +36,8 @@ import { PaymentPanel } from "@/components/payments/payment-panel";
 import { CashRegisterSheet } from "@/components/payments/cash-register-sheet";
 import { CustomerSheet } from "@/components/payments/customer-sheet";
 import { HistorySheet } from "@/components/payments/history-sheet";
+import { PosHotkeys } from "@/components/payments/pos-hotkeys";
+import { ShortcutsDialog } from "@/components/payments/shortcuts-dialog";
 
 export default function PaymentsPage() {
   return (
@@ -63,6 +66,8 @@ function PaymentCenter() {
   const [cashOpen, setCashOpen] = useState(false);
   const [customerOpen, setCustomerOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [resumeOpen, setResumeOpen] = useState(false);
+  const setHelpOpen = usePosUiStore((s) => s.setHelpOpen);
 
   const anySheetOpen = cashOpen || customerOpen || historyOpen;
 
@@ -178,7 +183,25 @@ function PaymentCenter() {
         onOpenHistory={() => setHistoryOpen(true)}
         onPrintLast={handlePrintLast}
         cartHasItems={lines.length > 0}
+        resumeOpen={resumeOpen}
+        onResumeOpenChange={setResumeOpen}
+        onShowShortcuts={() => setHelpOpen(true)}
       />
+
+      {/* Keyboard shortcuts: one global handler + the cheat-sheet overlay.
+          Page hotkeys stand down while a modal sheet owns the keyboard. */}
+      <PosHotkeys
+        enabled={!anySheetOpen}
+        onNewSale={clear}
+        onStartReturn={startReturn}
+        onSuspend={handleSuspend}
+        onResume={() => setResumeOpen(true)}
+        onOpenCustomer={() => setCustomerOpen(true)}
+        onOpenCash={() => setCashOpen(true)}
+        onOpenHistory={() => setHistoryOpen(true)}
+        onPrintLast={handlePrintLast}
+      />
+      <ShortcutsDialog />
 
       {/* Workspace — POS layout: products | cart | payment. On lg+ it's a fixed
           3-column row; below lg it stacks into 3 equal rows. Either way the grid

@@ -22,6 +22,7 @@ import {
   Printer,
   Trash2,
   Undo2,
+  Keyboard,
 } from "lucide-react";
 import type { HeldSale } from "@/lib/pos/held";
 
@@ -36,6 +37,11 @@ export interface QuickActionsProps {
   onOpenHistory: () => void;
   onPrintLast: () => void;
   cartHasItems: boolean;
+  /** Controlled open state for the Resume menu so F7 can open it. */
+  resumeOpen: boolean;
+  onResumeOpenChange: (open: boolean) => void;
+  /** Open the keyboard-shortcuts cheat-sheet. */
+  onShowShortcuts: () => void;
 }
 
 export function QuickActionsBar(props: QuickActionsProps) {
@@ -59,7 +65,7 @@ export function QuickActionsBar(props: QuickActionsProps) {
         <PauseCircle /> {t("payments.actions.suspend")}
       </Button>
 
-      <DropdownMenu>
+      <DropdownMenu open={props.resumeOpen} onOpenChange={props.onResumeOpenChange}>
         <DropdownMenuTrigger asChild>
           <Button size="sm" variant="outline">
             <PlayCircle /> {t("payments.actions.resume")}
@@ -116,6 +122,20 @@ export function QuickActionsBar(props: QuickActionsProps) {
       </Button>
       <Button size="sm" variant="outline" onClick={props.onPrintLast}>
         <Printer /> {t("payments.actions.printLast")}
+      </Button>
+
+      <Button
+        size="sm"
+        variant="ghost"
+        className="ms-auto"
+        onClick={props.onShowShortcuts}
+        title={t("payments.shortcuts.title")}
+        aria-label={t("payments.shortcuts.title")}
+      >
+        <Keyboard />
+        <kbd className="text-muted-foreground ms-1 hidden font-mono text-xs sm:inline">
+          F1
+        </kbd>
       </Button>
     </div>
   );

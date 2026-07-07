@@ -96,6 +96,7 @@ export function ProductBrowser({ onAddVariant, scannerEnabled = true }: Props) {
       <div className="relative">
         <Search className="text-muted-foreground absolute top-1/2 start-3 size-4 -translate-y-1/2" />
         <Input
+          data-pos-search
           className="ps-9"
           placeholder={t("payments.browser.searchPlaceholder")}
           value={search}
