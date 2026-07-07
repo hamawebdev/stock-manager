@@ -38,6 +38,7 @@ const BestSellersPage = lazy(() => import("@/pages/best-sellers"));
 const InventoryIntelligencePage = lazy(() => import("@/pages/inventory-intelligence"));
 const BulkImportPage = lazy(() => import("@/pages/bulk-import"));
 const PurchasingPage = lazy(() => import("@/pages/purchasing"));
+const ExpensesPage = lazy(() => import("@/pages/expenses"));
 const StudioPage = lazy(() => import("@/pages/studio"));
 const ReportsPage = lazy(() => import("@/pages/reports"));
 const SettingsPage = lazy(() => import("@/pages/settings"));
@@ -60,6 +61,7 @@ const router = createHashRouter([
       { path: "returns", element: <Navigate to="/" replace /> },
       { path: "cash", element: <Navigate to="/" replace /> },
       { path: "purchasing", element: <PurchasingPage /> },
+      { path: "expenses", element: <ExpensesPage /> },
       { path: "studio", element: <StudioPage /> },
       { path: "reports", element: <ReportsPage /> },
       { path: "settings", element: <SettingsPage /> },

@@ -128,7 +128,8 @@
     "sidebarDesc": "يعرض الشريط الجانبي للجوال.",
     "toggleSidebar": "تبديل الشريط الجانبي",
     "purchasing": "المشتريات",
-    "studio": "الاستوديو"
+    "studio": "الاستوديو",
+    "expenses": "المصاريف"
   },
   "settings": {
     "title": "الإعدادات",
@@ -1002,6 +1003,97 @@
     "fields": {
       "name": "الاسم",
       "phone": "الهاتف"
+    }
+  },
+  "expenses": {
+    "title": "المصاريف",
+    "subtitle": "سجّل ونظّم وحلّل كل مصاريف العمل.",
+    "addExpense": "إضافة مصروف",
+    "addTitle": "مصروف جديد",
+    "editTitle": "تعديل المصروف",
+    "categories": "الفئات",
+    "paymentMethods": "طرق الدفع",
+    "recurring": "المتكررة",
+    "exportExcel": "تصدير إلى Excel",
+    "exportPdf": "تصدير إلى PDF",
+    "searchPlaceholder": "ابحث عن المستفيد أو المرجع أو الملاحظة…",
+    "allCategories": "كل الفئات",
+    "allMethods": "كل الطرق",
+    "empty": "لا توجد مصاريف مطابقة للمرشحات.",
+    "code": "الرمز",
+    "total": "الإجمالي",
+    "amount": "المبلغ",
+    "date": "التاريخ",
+    "category": "الفئة",
+    "paymentMethod": "طريقة الدفع",
+    "selectMethod": "اختر طريقة",
+    "vendor": "المستفيد",
+    "vendorPlaceholder": "المستفيد / المورّد",
+    "reference": "المرجع",
+    "referencePlaceholder": "مرجع الفاتورة / الإيصال",
+    "note": "ملاحظة",
+    "uncategorized": "بدون فئة",
+    "attachments": "المرفقات",
+    "attach": "إرفاق ملفات",
+    "noAttachments": "لا توجد إيصالات مرفقة بعد.",
+    "pending": "قيد الانتظار",
+    "voucher": "سند مصروف",
+    "deleteTitle": "حذف المصروف؟",
+    "deleteConfirm": "سيتم حذف المصروف {{code}} ومرفقاته نهائيًا.",
+    "range": {
+      "this_month": "هذا الشهر",
+      "last_month": "الشهر الماضي",
+      "last_30": "آخر 30 يومًا",
+      "this_year": "هذه السنة",
+      "all": "كل الفترات",
+      "custom": "فترة مخصصة"
+    },
+    "tab": {
+      "overview": "نظرة عامة",
+      "list": "المصاريف",
+      "analytics": "التحليلات"
+    },
+    "kpi": {
+      "total": "إجمالي الإنفاق",
+      "count": "القيود",
+      "average": "المتوسط",
+      "largest": "الأكبر"
+    },
+    "dueNow": "متكررة مستحقة الآن",
+    "recordNow": "تسجيل الآن",
+    "byCategory": "حسب الفئة",
+    "byMethod": "حسب طريقة الدفع",
+    "monthlyTrend": "الإنفاق الشهري (12 شهرًا)",
+    "topVendors": "أبرز المستفيدين",
+    "manageCategories": "إدارة الفئات",
+    "newCategory": "اسم الفئة الجديدة",
+    "managePaymentMethods": "إدارة طرق الدفع",
+    "newMethod": "اسم الطريقة الجديدة",
+    "recurringDesc": "قوالب للتكاليف المتكررة (الإيجار، الاشتراكات…).",
+    "newTemplate": "قالب جديد",
+    "templateName": "الاسم",
+    "templateNamePlaceholder": "مثال: الإيجار الشهري",
+    "frequency": "التكرار",
+    "nextDue": "الاستحقاق التالي",
+    "active": "نشط",
+    "inactive": "غير نشط",
+    "noTemplates": "لا توجد قوالب متكررة بعد.",
+    "freq": {
+      "weekly": "أسبوعي",
+      "monthly": "شهري",
+      "quarterly": "ربع سنوي",
+      "yearly": "سنوي"
+    },
+    "toast": {
+      "saved": "تم حفظ المصروف",
+      "deleted": "تم حذف المصروف",
+      "amountRequired": "أدخل مبلغًا صحيحًا",
+      "dateRequired": "اختر تاريخًا",
+      "nameRequired": "الاسم مطلوب",
+      "categorySaved": "تم حفظ الفئة",
+      "methodSaved": "تم حفظ طريقة الدفع",
+      "templateSaved": "تم حفظ القالب",
+      "recorded": "تم تسجيل المصروف المتكرر"
     }
   }
 }

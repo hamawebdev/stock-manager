@@ -23,6 +23,7 @@ import * as bulk from "./bulk";
 import * as customers from "./customers";
 import * as promotions from "./promotions";
 import * as held from "./held";
+import * as expenses from "./expenses";
 import * as images from "@/lib/images";
 import {
   getSettings,
@@ -78,6 +79,21 @@ export const qk = {
   activePromotions: ["active-promotions"] as const,
   held: ["held"] as const,
   labelTemplates: ["label-templates"] as const,
+  expenseCategories: ["expense-categories"] as const,
+  expenseMethods: ["expense-methods"] as const,
+  expenseRecurring: ["expense-recurring"] as const,
+  expenses: (filters: expenses.ExpenseFilters) =>
+    ["expenses", filters] as const,
+  expenseAttachments: (id: number) => ["expense-attachments", id] as const,
+  expenseKpis: (filters: expenses.ExpenseFilters) =>
+    ["expense-kpis", filters] as const,
+  expenseByCategory: (filters: expenses.ExpenseFilters) =>
+    ["expense-by-category", filters] as const,
+  expenseByMethod: (filters: expenses.ExpenseFilters) =>
+    ["expense-by-method", filters] as const,
+  expenseByMonth: (months: number) => ["expense-by-month", months] as const,
+  expenseTopVendors: (filters: expenses.ExpenseFilters) =>
+    ["expense-top-vendors", filters] as const,
 };
 
 // --- Settings / currency ---------------------------------------------------
@@ -911,5 +927,219 @@ export function useDiscardHeld() {
   return useMutation({
     mutationFn: (id: number) => held.discardHeld(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.held }),
+  });
+}
+
+// --- Expenses --------------------------------------------------------------
+
+/** Invalidate every cache an expense mutation can affect (lists + analytics). */
+function invalidateExpenseCaches(qc: ReturnType<typeof useQueryClient>) {
+  qc.invalidateQueries({ queryKey: ["expenses"] });
+  qc.invalidateQueries({ queryKey: ["expense-kpis"] });
+  qc.invalidateQueries({ queryKey: ["expense-by-category"] });
+  qc.invalidateQueries({ queryKey: ["expense-by-method"] });
+  qc.invalidateQueries({ queryKey: ["expense-by-month"] });
+  qc.invalidateQueries({ queryKey: ["expense-top-vendors"] });
+}
+
+export function useExpenseCategories(includeArchived = false) {
+  return useQuery({
+    queryKey: [...qk.expenseCategories, includeArchived],
+    queryFn: () => expenses.listCategories(includeArchived),
+  });
+}
+
+export function useCreateExpenseCategory() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { name: string; color?: string | null }) =>
+      expenses.createCategory(v.name, v.color ?? null),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.expenseCategories }),
+  });
+}
+
+export function useUpdateExpenseCategory() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: {
+      id: number;
+      name?: string;
+      color?: string | null;
+    }) => expenses.updateCategory(v.id, { name: v.name, color: v.color }),
+    onSuccess: () => invalidateExpenseCaches(qc),
+  });
+}
+
+export function useArchiveExpenseCategory() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { id: number; restore?: boolean }) =>
+      v.restore
+        ? expenses.restoreCategory(v.id)
+        : expenses.archiveCategory(v.id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.expenseCategories }),
+  });
+}
+
+export function useExpenseMethods(includeArchived = false) {
+  return useQuery({
+    queryKey: [...qk.expenseMethods, includeArchived],
+    queryFn: () => expenses.listPaymentMethods(includeArchived),
+  });
+}
+
+export function useCreateExpenseMethod() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (name: string) => expenses.createPaymentMethod(name),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.expenseMethods }),
+  });
+}
+
+export function useUpdateExpenseMethod() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { id: number; name: string }) =>
+      expenses.updatePaymentMethod(v.id, v.name),
+    onSuccess: () => invalidateExpenseCaches(qc),
+  });
+}
+
+export function useArchiveExpenseMethod() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { id: number; restore?: boolean }) =>
+      v.restore
+        ? expenses.restorePaymentMethod(v.id)
+        : expenses.archivePaymentMethod(v.id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.expenseMethods }),
+  });
+}
+
+export function useExpenses(filters: expenses.ExpenseFilters) {
+  return useQuery({
+    queryKey: qk.expenses(filters),
+    queryFn: () => expenses.listExpenses(filters),
+  });
+}
+
+export function useCreateExpense() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: expenses.ExpenseInput) => expenses.createExpense(input),
+    onSuccess: () => invalidateExpenseCaches(qc),
+  });
+}
+
+export function useUpdateExpense() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { id: number; input: expenses.ExpenseInput }) =>
+      expenses.updateExpense(v.id, v.input),
+    onSuccess: () => invalidateExpenseCaches(qc),
+  });
+}
+
+export function useDeleteExpense() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const { deleteAttachmentFiles } = await import("@/lib/expense-attachments");
+      await expenses.deleteExpense(id);
+      await deleteAttachmentFiles(id);
+    },
+    onSuccess: () => invalidateExpenseCaches(qc),
+  });
+}
+
+export function useExpenseAttachments(expenseId: number | null) {
+  return useQuery({
+    queryKey: expenseId
+      ? qk.expenseAttachments(expenseId)
+      : ["expense-attachments", "none"],
+    queryFn: () => expenses.listAttachments(expenseId as number),
+    enabled: expenseId != null,
+  });
+}
+
+export function useExpenseKpis(filters: expenses.ExpenseFilters) {
+  return useQuery({
+    queryKey: qk.expenseKpis(filters),
+    queryFn: () => expenses.getKpis(filters),
+  });
+}
+
+export function useExpenseByCategory(filters: expenses.ExpenseFilters) {
+  return useQuery({
+    queryKey: qk.expenseByCategory(filters),
+    queryFn: () => expenses.getByCategory(filters),
+  });
+}
+
+export function useExpenseByMethod(filters: expenses.ExpenseFilters) {
+  return useQuery({
+    queryKey: qk.expenseByMethod(filters),
+    queryFn: () => expenses.getByMethod(filters),
+  });
+}
+
+export function useExpenseByMonth(months = 12) {
+  return useQuery({
+    queryKey: qk.expenseByMonth(months),
+    queryFn: () => expenses.getByMonth(months),
+  });
+}
+
+export function useExpenseTopVendors(
+  filters: expenses.ExpenseFilters,
+  limit = 10,
+) {
+  return useQuery({
+    queryKey: [...qk.expenseTopVendors(filters), limit],
+    queryFn: () => expenses.getTopVendors(limit, filters),
+  });
+}
+
+export function useRecurringTemplates() {
+  return useQuery({
+    queryKey: qk.expenseRecurring,
+    queryFn: expenses.listRecurring,
+  });
+}
+
+export function useCreateRecurring() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: expenses.RecurringInput) =>
+      expenses.createRecurring(input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.expenseRecurring }),
+  });
+}
+
+export function useUpdateRecurring() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { id: number; input: expenses.RecurringInput }) =>
+      expenses.updateRecurring(v.id, v.input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.expenseRecurring }),
+  });
+}
+
+export function useDeleteRecurring() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => expenses.deleteRecurring(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.expenseRecurring }),
+  });
+}
+
+export function usePostRecurring() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => expenses.postRecurring(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.expenseRecurring });
+      invalidateExpenseCaches(qc);
+    },
   });
 }

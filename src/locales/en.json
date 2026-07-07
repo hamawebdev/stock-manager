@@ -128,7 +128,8 @@
     "sidebarDesc": "Displays the mobile sidebar.",
     "toggleSidebar": "Toggle Sidebar",
     "purchasing": "Purchasing",
-    "studio": "Studio"
+    "studio": "Studio",
+    "expenses": "Expenses"
   },
   "settings": {
     "title": "Settings",
@@ -994,6 +995,97 @@
     "fields": {
       "name": "Name",
       "phone": "Phone"
+    }
+  },
+  "expenses": {
+    "title": "Expenses",
+    "subtitle": "Record, organize and analyze every business expense.",
+    "addExpense": "Add Expense",
+    "addTitle": "New Expense",
+    "editTitle": "Edit Expense",
+    "categories": "Categories",
+    "paymentMethods": "Payment Methods",
+    "recurring": "Recurring",
+    "exportExcel": "Export to Excel",
+    "exportPdf": "Export to PDF",
+    "searchPlaceholder": "Search vendor, reference, note…",
+    "allCategories": "All categories",
+    "allMethods": "All methods",
+    "empty": "No expenses match the current filters.",
+    "code": "Code",
+    "total": "Total",
+    "amount": "Amount",
+    "date": "Date",
+    "category": "Category",
+    "paymentMethod": "Payment method",
+    "selectMethod": "Select a method",
+    "vendor": "Vendor",
+    "vendorPlaceholder": "Payee / beneficiary",
+    "reference": "Reference",
+    "referencePlaceholder": "Invoice / receipt ref.",
+    "note": "Note",
+    "uncategorized": "Uncategorized",
+    "attachments": "Attachments",
+    "attach": "Attach files",
+    "noAttachments": "No receipts attached yet.",
+    "pending": "pending",
+    "voucher": "Expense Voucher",
+    "deleteTitle": "Delete expense?",
+    "deleteConfirm": "This will permanently remove expense {{code}} and its attachments.",
+    "range": {
+      "this_month": "This month",
+      "last_month": "Last month",
+      "last_30": "Last 30 days",
+      "this_year": "This year",
+      "all": "All time",
+      "custom": "Custom range"
+    },
+    "tab": {
+      "overview": "Overview",
+      "list": "Expenses",
+      "analytics": "Analytics"
+    },
+    "kpi": {
+      "total": "Total spend",
+      "count": "Entries",
+      "average": "Average",
+      "largest": "Largest"
+    },
+    "dueNow": "Recurring due now",
+    "recordNow": "Record now",
+    "byCategory": "By category",
+    "byMethod": "By payment method",
+    "monthlyTrend": "Monthly spend (12 months)",
+    "topVendors": "Top vendors",
+    "manageCategories": "Manage categories",
+    "newCategory": "New category name",
+    "managePaymentMethods": "Manage payment methods",
+    "newMethod": "New method name",
+    "recurringDesc": "Templates for recurring costs (rent, subscriptions…).",
+    "newTemplate": "New template",
+    "templateName": "Name",
+    "templateNamePlaceholder": "e.g. Monthly rent",
+    "frequency": "Frequency",
+    "nextDue": "Next due",
+    "active": "Active",
+    "inactive": "Inactive",
+    "noTemplates": "No recurring templates yet.",
+    "freq": {
+      "weekly": "Weekly",
+      "monthly": "Monthly",
+      "quarterly": "Quarterly",
+      "yearly": "Yearly"
+    },
+    "toast": {
+      "saved": "Expense saved",
+      "deleted": "Expense deleted",
+      "amountRequired": "Enter a valid amount",
+      "dateRequired": "Pick a date",
+      "nameRequired": "Name is required",
+      "categorySaved": "Category saved",
+      "methodSaved": "Payment method saved",
+      "templateSaved": "Template saved",
+      "recorded": "Recurring expense recorded"
     }
   }
 }

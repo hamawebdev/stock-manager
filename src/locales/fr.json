@@ -128,7 +128,8 @@
     "sidebarDesc": "Affiche la barre latérale mobile.",
     "toggleSidebar": "Basculer la barre latérale",
     "purchasing": "Achats",
-    "studio": "Studio"
+    "studio": "Studio",
+    "expenses": "Dépenses"
   },
   "settings": {
     "title": "Paramètres",
@@ -994,6 +995,97 @@
     "fields": {
       "name": "Nom",
       "phone": "Téléphone"
+    }
+  },
+  "expenses": {
+    "title": "Dépenses",
+    "subtitle": "Enregistrez, organisez et analysez chaque dépense.",
+    "addExpense": "Ajouter une dépense",
+    "addTitle": "Nouvelle dépense",
+    "editTitle": "Modifier la dépense",
+    "categories": "Catégories",
+    "paymentMethods": "Modes de paiement",
+    "recurring": "Récurrentes",
+    "exportExcel": "Exporter en Excel",
+    "exportPdf": "Exporter en PDF",
+    "searchPlaceholder": "Rechercher bénéficiaire, référence, note…",
+    "allCategories": "Toutes les catégories",
+    "allMethods": "Tous les modes",
+    "empty": "Aucune dépense ne correspond aux filtres.",
+    "code": "Code",
+    "total": "Total",
+    "amount": "Montant",
+    "date": "Date",
+    "category": "Catégorie",
+    "paymentMethod": "Mode de paiement",
+    "selectMethod": "Choisir un mode",
+    "vendor": "Bénéficiaire",
+    "vendorPlaceholder": "Bénéficiaire / fournisseur",
+    "reference": "Référence",
+    "referencePlaceholder": "Réf. facture / reçu",
+    "note": "Note",
+    "uncategorized": "Sans catégorie",
+    "attachments": "Pièces jointes",
+    "attach": "Joindre des fichiers",
+    "noAttachments": "Aucun justificatif joint.",
+    "pending": "en attente",
+    "voucher": "Bon de dépense",
+    "deleteTitle": "Supprimer la dépense ?",
+    "deleteConfirm": "La dépense {{code}} et ses pièces jointes seront supprimées définitivement.",
+    "range": {
+      "this_month": "Ce mois-ci",
+      "last_month": "Le mois dernier",
+      "last_30": "30 derniers jours",
+      "this_year": "Cette année",
+      "all": "Tout",
+      "custom": "Période personnalisée"
+    },
+    "tab": {
+      "overview": "Aperçu",
+      "list": "Dépenses",
+      "analytics": "Analyses"
+    },
+    "kpi": {
+      "total": "Total dépensé",
+      "count": "Écritures",
+      "average": "Moyenne",
+      "largest": "Plus élevée"
+    },
+    "dueNow": "Récurrentes à échéance",
+    "recordNow": "Enregistrer",
+    "byCategory": "Par catégorie",
+    "byMethod": "Par mode de paiement",
+    "monthlyTrend": "Dépenses mensuelles (12 mois)",
+    "topVendors": "Principaux bénéficiaires",
+    "manageCategories": "Gérer les catégories",
+    "newCategory": "Nom de la catégorie",
+    "managePaymentMethods": "Gérer les modes de paiement",
+    "newMethod": "Nom du mode",
+    "recurringDesc": "Modèles pour les coûts récurrents (loyer, abonnements…).",
+    "newTemplate": "Nouveau modèle",
+    "templateName": "Nom",
+    "templateNamePlaceholder": "ex. Loyer mensuel",
+    "frequency": "Fréquence",
+    "nextDue": "Prochaine échéance",
+    "active": "Actif",
+    "inactive": "Inactif",
+    "noTemplates": "Aucun modèle récurrent.",
+    "freq": {
+      "weekly": "Hebdomadaire",
+      "monthly": "Mensuel",
+      "quarterly": "Trimestriel",
+      "yearly": "Annuel"
+    },
+    "toast": {
+      "saved": "Dépense enregistrée",
+      "deleted": "Dépense supprimée",
+      "amountRequired": "Saisissez un montant valide",
+      "dateRequired": "Choisissez une date",
+      "nameRequired": "Le nom est requis",
+      "categorySaved": "Catégorie enregistrée",
+      "methodSaved": "Mode de paiement enregistré",
+      "templateSaved": "Modèle enregistré",
+      "recorded": "Dépense récurrente enregistrée"
     }
   }
 }
