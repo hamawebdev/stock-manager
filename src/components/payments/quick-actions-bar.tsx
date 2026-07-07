@@ -17,7 +17,6 @@ import {
   PauseCircle,
   PlayCircle,
   Inbox,
-  Users,
   Wallet,
   History,
   Printer,
@@ -33,8 +32,6 @@ export interface QuickActionsProps {
   onResume: (id: number) => void;
   onDiscardHeld: (id: number) => void;
   heldSales: HeldSale[];
-  onOpenDrawer: () => void;
-  onOpenCustomer: () => void;
   onOpenCash: () => void;
   onOpenHistory: () => void;
   onPrintLast: () => void;
@@ -111,14 +108,8 @@ export function QuickActionsBar(props: QuickActionsProps) {
 
       <span className="bg-border mx-1 h-5 w-px" />
 
-      <Button size="sm" variant="outline" onClick={props.onOpenCustomer}>
-        <Users /> {t("payments.actions.customer")}
-      </Button>
       <Button size="sm" variant="outline" onClick={props.onOpenCash}>
         <Wallet /> {t("payments.actions.cashRegister")}
-      </Button>
-      <Button size="sm" variant="outline" onClick={props.onOpenDrawer}>
-        {t("payments.actions.openDrawer")}
       </Button>
       <Button size="sm" variant="outline" onClick={props.onOpenHistory}>
         <History /> {t("payments.actions.history")}

@@ -311,6 +311,10 @@
       "unitPrice": "Prix unitaire",
       "lineNote": "Note de ligne",
       "notePlaceholder": "ex. emballage cadeau, retouche…",
+      "removeItem": "Supprimer l’article",
+      "itemRemoved": "Article supprimé",
+      "removeModifiedTitle": "Supprimer l’article ?",
+      "removeModifiedBody": "« {{name}} » a été modifié (prix, remise ou note). Le supprimer quand même ?",
       "col": {
         "product": "Produit / Code",
         "qty": "Qté",

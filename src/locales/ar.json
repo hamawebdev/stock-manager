@@ -315,6 +315,10 @@
       "unitPrice": "سعر الوحدة",
       "lineNote": "ملاحظة السطر",
       "notePlaceholder": "مثل تغليف هدية، تعديل…",
+      "removeItem": "إزالة العنصر",
+      "itemRemoved": "تمت إزالة العنصر",
+      "removeModifiedTitle": "إزالة العنصر؟",
+      "removeModifiedBody": "تم تعديل «{{name}}» (السعر أو الخصم أو الملاحظة). هل تريد إزالته على أي حال؟",
       "col": {
         "product": "المنتج / الرمز",
         "qty": "الكمية",

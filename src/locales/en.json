@@ -311,6 +311,10 @@
       "unitPrice": "Unit price",
       "lineNote": "Line note",
       "notePlaceholder": "e.g. gift wrap, alteration…",
+      "removeItem": "Remove item",
+      "itemRemoved": "Item removed",
+      "removeModifiedTitle": "Remove item?",
+      "removeModifiedBody": "“{{name}}” has been modified (price, discount or note). Remove it anyway?",
       "col": {
         "product": "Product / Code",
         "qty": "Qty",

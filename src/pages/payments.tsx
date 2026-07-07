@@ -15,8 +15,6 @@ import {
   useHoldSale,
   useResumeHeld,
   useDiscardHeld,
-  useOpenSession,
-  useAddCashEvent,
   useSettings,
 } from "@/lib/pos/queries";
 import { useCartStore } from "@/store/use-cart-store";
@@ -25,10 +23,10 @@ import { getVariantDetail } from "@/lib/pos/catalog";
 import { currencyFromSettings } from "@/lib/pos/settings";
 import { intlLocale } from "@/lib/i18n";
 import { buildReceiptFromSale } from "@/lib/pos/receipt";
-import { printReceipt, openCashDrawer } from "@/lib/pos/hardware";
+import { printReceipt } from "@/lib/pos/hardware";
 import type { VariantDetail } from "@/lib/pos/types";
 
-import { ManagerGateProvider, useManagerGate } from "@/components/payments/manager-gate";
+import { ManagerGateProvider } from "@/components/payments/manager-gate";
 import { InsightsStrip } from "@/components/payments/insights-strip";
 import { QuickActionsBar } from "@/components/payments/quick-actions-bar";
 import { ProductBrowser } from "@/components/payments/product-browser";
@@ -48,15 +46,12 @@ export default function PaymentsPage() {
 
 function PaymentCenter() {
   const { t } = useTranslation();
-  const { requireManager } = useManagerGate();
   const settings = useSettings();
 
   const held = useHeldSales();
   const holdSale = useHoldSale();
   const resumeHeld = useResumeHeld();
   const discardHeld = useDiscardHeld();
-  const session = useOpenSession();
-  const addEvent = useAddCashEvent();
 
   const addVariant = useCartStore((s) => s.addVariant);
   const clear = useCartStore((s) => s.clear);
@@ -149,23 +144,6 @@ function PaymentCenter() {
     }
   }
 
-  async function handleOpenDrawer() {
-    if (!(await requireManager(t("payments.openDrawerReason")))) return;
-    try {
-      if (session.data) {
-        await addEvent.mutateAsync({
-          sessionId: session.data.id,
-          kind: "no_sale",
-          amountCents: 0,
-          reason: t("payments.manualOpen"),
-        });
-      }
-      await openCashDrawer();
-    } catch (err) {
-      toast.error(t("payments.couldNotOpenDrawer", { error: String(err) }));
-    }
-  }
-
   async function handlePrintLast() {
     try {
       const [last] = await listRecentSales(1);
@@ -196,8 +174,6 @@ function PaymentCenter() {
         onResume={handleResume}
         onDiscardHeld={(id) => discardHeld.mutate(id)}
         heldSales={held.data ?? []}
-        onOpenDrawer={handleOpenDrawer}
-        onOpenCustomer={() => setCustomerOpen(true)}
         onOpenCash={() => setCashOpen(true)}
         onOpenHistory={() => setHistoryOpen(true)}
         onPrintLast={handlePrintLast}

@@ -3,7 +3,7 @@
  * permission-gated price override, an optional note, and remove. Reuses the
  * shared cart store and its pure total helpers.
  */
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,16 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Minus, Plus, Trash2, ShoppingCart, Pencil, StickyNote, Undo2, Package } from "lucide-react";
 import { toast } from "sonner";
@@ -26,7 +36,25 @@ import { useCurrency, useProductImages } from "@/lib/pos/queries";
 import { formatMoney, parseMoney } from "@/lib/money";
 import { variantLabel } from "@/lib/pos/labels";
 import { productImageSrc } from "@/lib/images";
+import { cn } from "@/lib/utils";
 import { useManagerGate } from "./manager-gate";
+
+/** Collapse/fade duration for the row removal animation (ms). */
+const REMOVE_ANIM_MS = 180;
+
+/**
+ * A line counts as "modified" once the cashier has touched its price, added a
+ * discount, or attached a note — removing it then warrants a quick confirm so a
+ * stray Delete doesn't silently wipe deliberate work. Fresh lines remove
+ * instantly. (Return lines are never treated as modified — see requestRemove.)
+ */
+function isLineModified(l: CartLine): boolean {
+  return (
+    l.discount != null ||
+    !!l.note ||
+    l.unit_price_cents !== l.variant.effective_price_cents
+  );
+}
 
 export function CartPanel() {
   const { t } = useTranslation();
@@ -37,6 +65,83 @@ export function CartPanel() {
   const removeLine = useCartStore((s) => s.removeLine);
   const returnMode = useCartStore((s) => s.returnMode);
   const originalSaleId = useCartStore((s) => s.originalSaleId);
+
+  // Which line is selected (for the Delete/Backspace shortcut and highlight),
+  // which lines are mid-exit-animation, and any modified line pending a confirm.
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [removingIds, setRemovingIds] = useState<Set<number>>(new Set());
+  const [confirmLine, setConfirmLine] = useState<CartLine | null>(null);
+
+  // Actually remove a line: play the collapse animation, then commit to the
+  // store. Totals, Change, Amount Paid and the Charge button all derive from
+  // `lines` via the store, so they recalculate the instant we commit — nothing
+  // to recompute here. Selection hops to a neighbour so Delete can repeat.
+  const performRemove = useCallback(
+    (variantId: number) => {
+      setRemovingIds((prev) => {
+        if (prev.has(variantId)) return prev; // already leaving
+        return new Set(prev).add(variantId);
+      });
+
+      const idx = lines.findIndex((l) => l.variant.id === variantId);
+      const rest = lines.filter((l) => l.variant.id !== variantId);
+      const nextSelected =
+        rest.length === 0 ? null : (rest[idx] ?? rest[rest.length - 1]).variant.id;
+
+      window.setTimeout(() => {
+        removeLine(variantId);
+        setRemovingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(variantId);
+          return next;
+        });
+        setSelectedId((cur) => (cur === variantId ? nextSelected : cur));
+        toast.success(t("payments.cart.itemRemoved"));
+      }, REMOVE_ANIM_MS);
+    },
+    [lines, removeLine, t],
+  );
+
+  // Entry point for every removal (button click or keyboard). Modified sale
+  // lines get a lightweight confirm first; plain lines and return lines go
+  // straight through.
+  const requestRemove = useCallback(
+    (line: CartLine) => {
+      if (removingIds.has(line.variant.id)) return;
+      if (!returnMode && isLineModified(line)) {
+        setConfirmLine(line);
+        return;
+      }
+      performRemove(line.variant.id);
+    },
+    [removingIds, returnMode, performRemove],
+  );
+
+  // Delete/Backspace removes the selected line. Ignored while the user is
+  // typing in a field (input/textarea/contenteditable) so editing prices,
+  // notes or the search box is never hijacked. The global barcode scanner
+  // isn't affected — it only reacts to printable keys, not Delete/Backspace.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key !== "Delete" && e.key !== "Backspace") return;
+      if (selectedId == null) return;
+      const el = document.activeElement as HTMLElement | null;
+      if (
+        el &&
+        (el.tagName === "INPUT" ||
+          el.tagName === "TEXTAREA" ||
+          el.isContentEditable)
+      ) {
+        return;
+      }
+      const line = lines.find((l) => l.variant.id === selectedId);
+      if (!line) return;
+      e.preventDefault();
+      requestRemove(line);
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [selectedId, lines, requestRemove]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -62,7 +167,24 @@ export function CartPanel() {
         <ScrollArea className="min-h-0 flex-1 overflow-hidden">
           <ul className="divide-y">
             {lines.map((l) => (
-              <li key={l.variant.id} className="flex gap-2.5 p-3">
+              <li
+                key={l.variant.id}
+                onClick={() => setSelectedId(l.variant.id)}
+                aria-selected={selectedId === l.variant.id}
+                className={cn(
+                  "grid transition-all ease-out",
+                  removingIds.has(l.variant.id)
+                    ? "grid-rows-[0fr] opacity-0"
+                    : "grid-rows-[1fr] opacity-100",
+                )}
+                style={{ transitionDuration: `${REMOVE_ANIM_MS}ms` }}
+              >
+              <div
+                className={cn(
+                  "flex gap-2.5 overflow-hidden p-3",
+                  selectedId === l.variant.id && "bg-accent/60",
+                )}
+              >
                 <CartLineThumb
                   productId={l.variant.product_id}
                   name={l.variant.product_name}
@@ -140,18 +262,58 @@ export function CartPanel() {
                       <Button
                         variant="ghost"
                         size="icon-sm"
-                        onClick={() => removeLine(l.variant.id)}
+                        className="text-muted-foreground hover:text-destructive"
+                        aria-label={t("payments.cart.removeItem")}
+                        title={t("payments.cart.removeItem")}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          requestRemove(l);
+                        }}
                       >
                         <Trash2 />
                       </Button>
                     </div>
                   </div>
                 </div>
+              </div>
               </li>
             ))}
           </ul>
         </ScrollArea>
       )}
+
+      {/* Confirm removing a line the cashier deliberately edited. */}
+      <AlertDialog
+        open={confirmLine != null}
+        onOpenChange={(o) => !o && setConfirmLine(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t("payments.cart.removeModifiedTitle")}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmLine
+                ? t("payments.cart.removeModifiedBody", {
+                    name: confirmLine.variant.product_name,
+                  })
+                : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-white hover:bg-destructive/90"
+              onClick={() => {
+                if (confirmLine) performRemove(confirmLine.variant.id);
+                setConfirmLine(null);
+              }}
+            >
+              {t("common.remove")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
