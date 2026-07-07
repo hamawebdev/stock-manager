@@ -1,5 +1,5 @@
 import type Database from "@tauri-apps/plugin-sql";
-import { ensureConnPragmas, getRawDb, serialize } from "@/lib/db";
+import { getRawDb, serialize } from "@/lib/db";
 
 export { getDb } from "@/lib/db";
 export type { Db } from "@/lib/db";
@@ -9,14 +9,16 @@ export type { Db } from "@/lib/db";
  * on any error. plugin-sql exposes no transaction object, so we drive
  * BEGIN/COMMIT/ROLLBACK explicitly.
  *
- * The entire BEGIN…COMMIT sequence runs inside a single `serialize` slot, so no
- * other database operation can interleave with it. That is what makes the
- * hand-rolled transaction safe: plugin-sql's underlying sqlx pool would
- * otherwise route the statements across different physical connections and the
- * BEGIN IMMEDIATE write lock would deadlock the later writes (SQLITE_BUSY,
- * "database is locked"). `fn` receives the raw pooled handle directly — its
- * statements must bypass the queue, because this transaction already holds it
- * (re-entering `serialize` would enqueue behind the transaction awaiting them).
+ * Two things make the hand-rolled transaction safe. First, the database is
+ * pinned to a single physical connection (see `loadRaw` /
+ * `db_use_single_connection`), so every statement runs on the same connection —
+ * without that, plugin-sql's pool could route statements across connections and
+ * the BEGIN IMMEDIATE write lock would deadlock the later writes (SQLITE_BUSY,
+ * "database is locked"). Second, the entire BEGIN…COMMIT sequence runs inside a
+ * single `serialize` slot, so no other operation can interleave with it. `fn`
+ * receives the raw handle directly — its statements must bypass the queue,
+ * because this transaction already holds it (re-entering `serialize` would
+ * enqueue behind the transaction awaiting them).
  *
  * Uses BEGIN IMMEDIATE to take the RESERVED write lock up front.
  *
@@ -29,13 +31,6 @@ export async function withTx<T>(
 ): Promise<T> {
   const db = await getRawDb();
   return serialize(async () => {
-    // The pooled connection may have been recycled by sqlx since load, dropping
-    // busy_timeout (→ 0) and foreign_keys. Re-assert them before BEGIN so the
-    // whole transaction has a lock timeout (no instant "database is locked") and
-    // FK enforcement. foreign_keys is a no-op inside a transaction, so it must
-    // precede BEGIN. This slot owns the single connection, so these PRAGMAs and
-    // every statement below run on the same one.
-    await ensureConnPragmas(db);
     await db.execute("BEGIN IMMEDIATE");
     try {
       const result = await fn(db);

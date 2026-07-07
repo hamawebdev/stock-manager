@@ -1,4 +1,5 @@
 import Database from "@tauri-apps/plugin-sql";
+import { invoke } from "@tauri-apps/api/core";
 
 /** Narrow view of the plugin-sql handle: only the methods the app uses. */
 export type Db = Pick<Database, "execute" | "select">;
@@ -6,16 +7,23 @@ export type Db = Pick<Database, "execute" | "select">;
 let loadPromise: Promise<Database> | null = null;
 
 /**
- * Open the database once and apply connection PRAGMAs. Memoized as a *promise*
- * so concurrent first callers share a single `Database.load` (no double open).
+ * Open the database once, then pin it to a single connection. Memoized as a
+ * *promise* so concurrent first callers share a single open (no double load).
+ *
+ * `db_use_single_connection` (Rust) replaces tauri-plugin-sql's default pool
+ * (up to 10 SQLite connections) with a single-connection pool, *after* the
+ * plugin has run migrations on its pool. Pinning to one connection is what makes
+ * the hand-rolled `BEGIN`/`COMMIT` transactions in `withTx` safe: every
+ * statement necessarily lands on the same physical connection, so a transaction
+ * can never split across connections and deadlock ("database is locked"). WAL /
+ * busy_timeout / foreign_keys are applied to that connection at connect time by
+ * the pinned pool, so no PRAGMAs are needed here.
  */
 function loadRaw(): Promise<Database> {
   if (!loadPromise) {
     loadPromise = (async () => {
       const db = await Database.load("sqlite:app.db");
-      await db.execute("PRAGMA journal_mode = WAL");
-      await db.execute("PRAGMA busy_timeout = 5000");
-      await db.execute("PRAGMA foreign_keys = ON");
+      await invoke("db_use_single_connection");
       return db;
     })();
   }
@@ -25,12 +33,13 @@ function loadRaw(): Promise<Database> {
 /**
  * Serialize every database operation through a single-flight FIFO queue.
  *
- * plugin-sql backs the one JS `Database` with a sqlx connection pool (default
- * 10 connections) and acquires an arbitrary connection per `execute`/`select`.
- * Client-driven `BEGIN`/`COMMIT` are only safe if every statement lands on the
- * same physical connection — which holds iff no two operations are ever in
- * flight at once. This mutex guarantees exactly that, so the pool never opens a
- * second connection and transactions cannot self-deadlock (SQLITE_BUSY).
+ * The database is pinned to one physical connection (see `loadRaw`), but
+ * plugin-sql acquires+releases that connection per `execute`/`select`. Without
+ * serialization another operation could acquire the connection *between* a
+ * transaction's `BEGIN` and `COMMIT` (running its statement inside — or aborting
+ * — that transaction), or two ops could contend for the single connection. This
+ * mutex guarantees no two operations are ever in flight at once, so hand-rolled
+ * transactions stay atomic and cannot self-deadlock (SQLITE_BUSY).
  */
 let tail: Promise<unknown> = Promise.resolve();
 
@@ -49,23 +58,6 @@ export function getRawDb(): Promise<Database> {
 }
 
 /**
- * Re-assert the per-connection PRAGMAs on whatever pooled connection this call
- * lands on. plugin-sql runs each statement against the sqlx pool, which recycles
- * connections (idle_timeout 10m / max_lifetime 30m); a recycled connection loses
- * `busy_timeout` (reverts to 0, so a transient lock fails instantly with
- * "database is locked") and `foreign_keys` (constraints silently stop being
- * enforced). `journal_mode = WAL` is persisted in the database file, so it never
- * needs re-asserting. Must run inside a `serialize` slot so it targets the same
- * connection as the write that follows.
- */
-export async function ensureConnPragmas(
-  db: Pick<Database, "execute">,
-): Promise<void> {
-  await db.execute("PRAGMA busy_timeout = 5000");
-  await db.execute("PRAGMA foreign_keys = ON");
-}
-
-/**
  * The shared database handle for all standalone reads and writes. Every
  * `execute`/`select` runs through the serialization queue (see `serialize`).
  */
@@ -73,12 +65,7 @@ export async function getDb(): Promise<Db> {
   const db = await loadRaw();
   return {
     execute: (query, bindValues) =>
-      serialize(async () => {
-        // Guard standalone writes against a pool connection that was recycled
-        // (and so reverted to busy_timeout=0 / foreign_keys=off) since load.
-        await ensureConnPragmas(db);
-        return db.execute(query, bindValues);
-      }),
+      serialize(() => db.execute(query, bindValues)),
     select<T>(query: string, bindValues?: unknown[]): Promise<T> {
       return serialize(() => db.select<T>(query, bindValues));
     },

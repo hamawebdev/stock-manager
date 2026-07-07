@@ -109,6 +109,56 @@ fn db_restore(app: tauri::AppHandle, src: String) -> Result<(), CommandError> {
     Ok(())
 }
 
+/// Replace tauri-plugin-sql's default connection pool (which allows up to 10
+/// SQLite connections) with a single-connection pool.
+///
+/// The frontend drives transactions by hand — `withTx` runs
+/// `BEGIN IMMEDIATE` … `COMMIT` as *separate* `execute` calls. The plugin routes
+/// each call to an arbitrary connection from the pool, so with more than one
+/// pooled connection a transaction's statements can land on different physical
+/// connections: `BEGIN IMMEDIATE` takes the write lock on one, a later statement
+/// runs on another and blocks on that lock, and after `busy_timeout` it fails
+/// with "database is locked". Pinning the pool to exactly one connection makes
+/// that split impossible.
+///
+/// Called once from the frontend right after `Database.load`, so the plugin has
+/// already created its pool and run migrations on it; this swaps in the pinned
+/// pool afterwards (the previous pool is dropped). Connection reaping is disabled
+/// so the single connection is never replaced mid-transaction.
+#[tauri::command]
+#[specta::specta]
+async fn db_use_single_connection(
+    app: tauri::AppHandle,
+    db_instances: tauri::State<'_, tauri_plugin_sql::DbInstances>,
+) -> Result<(), CommandError> {
+    use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions};
+    use std::time::Duration;
+
+    let path = db_path(&app)?;
+    let opts = SqliteConnectOptions::new()
+        .filename(&path)
+        .create_if_missing(false)
+        .journal_mode(SqliteJournalMode::Wal)
+        .busy_timeout(Duration::from_secs(5))
+        .foreign_keys(true);
+    let pool = SqlitePoolOptions::new()
+        .max_connections(1)
+        .min_connections(1)
+        .idle_timeout(Option::<Duration>::None)
+        .max_lifetime(Option::<Duration>::None)
+        .connect_with(opts)
+        .await
+        .map_err(|e| CommandError::new(format!("open single-connection pool: {e}")))?;
+
+    // Swap the pinned pool in under the same key the frontend uses
+    // (`sqlite:app.db`); dropping the returned value releases the old pool.
+    db_instances.0.write().await.insert(
+        "sqlite:app.db".to_string(),
+        tauri_plugin_sql::DbPool::Sqlite(pool),
+    );
+    Ok(())
+}
+
 /// Build the tauri-specta command registry. Shared by `run()` and the
 /// `export_bindings` test so generated TypeScript always matches the app.
 fn specta_builder() -> Builder {
@@ -118,7 +168,8 @@ fn specta_builder() -> Builder {
         print_raw,
         write_bytes,
         db_backup,
-        db_restore
+        db_restore,
+        db_use_single_connection
     ])
 }
 

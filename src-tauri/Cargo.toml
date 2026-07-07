@@ -24,6 +24,10 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tauri-plugin-store = "2.4.3"
 tauri-plugin-sql = { version = "2.4.0", features = ["sqlite"] }
+# Used only to swap tauri-plugin-sql's default connection pool for a
+# single-connection one (see `db_use_single_connection`). Version/features must
+# match what tauri-plugin-sql pulls in so the `Pool<Sqlite>` types unify.
+sqlx = { version = "0.8", features = ["sqlite", "runtime-tokio"] }
 tauri-plugin-dialog = "2.7.1"
 tauri-plugin-fs = "2.5.1"
 tauri-plugin-notification = "2.3.3"
