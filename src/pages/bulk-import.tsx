@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft, FileSpreadsheet, Download, Upload, CheckCircle2 } from "lucide-react";
@@ -13,12 +13,25 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useCurrency, useBulkImport } from "@/lib/pos/queries";
-import type { BulkImportRow } from "@/lib/pos/bulk";
-import type { ExportColumn } from "@/lib/export";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { useCurrency, useImportCatalog } from "@/lib/pos/queries";
+import type {
+  CatalogImportResult,
+  CatalogImportRow,
+  StockPolicy,
+} from "@/lib/pos/catalog-io";
 import { parseMoney, formatMoney } from "@/lib/money";
 
-interface PreviewRow extends BulkImportRow {
+interface PreviewRow extends CatalogImportRow {
   error?: string;
 }
 
@@ -33,30 +46,42 @@ function field(row: Record<string, unknown>, names: string[]): string {
   return "";
 }
 
-const TEMPLATE_COLUMNS: ExportColumn<Record<string, string | number>>[] = [
-  { header: "name", value: (r) => r.name },
-  { header: "category", value: (r) => r.category },
-  { header: "supplier", value: (r) => r.supplier },
-  { header: "reference", value: (r) => r.reference },
-  { header: "barcode", value: (r) => r.barcode },
-  { header: "purchase_price", value: (r) => r.purchase_price },
-  { header: "selling_price", value: (r) => r.selling_price },
-  { header: "stock", value: (r) => r.stock },
-  { header: "low_stock", value: (r) => r.low_stock },
-];
+/** Parse a 0/1/yes/no/true/false flag; "" => null (leave unchanged on update). */
+function parseFlag(s: string): number | null {
+  if (!s) return null;
+  return /^(1|yes|true|y|on)$/i.test(s) ? 1 : 0;
+}
+
+const STOCK_POLICIES: StockPolicy[] = ["create_only", "overwrite", "add"];
 
 export default function BulkImportPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const currency = useCurrency();
-  const importer = useBulkImport();
+  const importer = useImportCatalog();
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const [fileName, setFileName] = useState<string | null>(null);
   const [rows, setRows] = useState<PreviewRow[]>([]);
-  const [done, setDone] = useState<{ created: number; failed: number } | null>(null);
+  const [done, setDone] = useState<CatalogImportResult | null>(null);
+  const [policyOpen, setPolicyOpen] = useState(false);
+  const [policy, setPolicy] = useState<StockPolicy>("create_only");
 
-  const validCount = rows.filter((r) => !r.error).length;
+  const validRows = useMemo(() => rows.filter((r) => !r.error), [rows]);
+  const productCount = useMemo(() => {
+    const keys = new Set<string>();
+    for (const r of validRows) {
+      keys.add(r.reference ? `ref:${r.reference.toLowerCase()}` : `name:${r.name.toLowerCase()}`);
+    }
+    return keys.size;
+  }, [validRows]);
+
+  /** Parse a money cell: blank => null (inherit/unset), bad value => flagged. */
+  function money(str: string): { cents: number | null; bad: boolean } {
+    if (!str) return { cents: null, bad: false };
+    const cents = parseMoney(str, currency.decimals);
+    return cents == null ? { cents: null, bad: true } : { cents, bad: false };
+  }
 
   async function parseFile(file: File) {
     setDone(null);
@@ -70,31 +95,37 @@ export default function BulkImportPage() {
       });
       const parsed: PreviewRow[] = json.map((raw) => {
         const name = field(raw, ["name", "product", "product name"]);
-        const purchase = parseMoney(
-          field(raw, ["purchase_price", "purchase price", "purchase", "cost"]) || "0",
-          currency.decimals,
-        );
-        const selling = parseMoney(
-          field(raw, ["selling_price", "selling price", "selling", "price"]) || "0",
-          currency.decimals,
-        );
-        const stockStr = field(raw, ["stock", "qty", "quantity"]) || "0";
-        const lowStr = field(raw, ["low_stock", "low stock", "low stock threshold"]);
+        const cost = money(field(raw, ["purchase_price", "purchase price", "purchase", "cost"]));
+        const price = money(field(raw, ["selling_price", "selling price", "selling", "price"]));
+        const vCost = money(field(raw, ["variant_purchase_price", "variant purchase price", "variant cost"]));
+        const vPrice = money(field(raw, ["variant_selling_price", "variant selling price", "variant price"]));
+        const low = field(raw, ["low_stock", "low stock", "low stock threshold"]);
+        const reorder = field(raw, ["reorder_qty", "reorder", "reorder quantity"]);
         const error = !name
           ? t("bulkImport.missingName")
-          : purchase == null || selling == null
+          : cost.bad || price.bad || vCost.bad || vPrice.bad
             ? t("inventory.invalidPrice")
             : undefined;
         return {
           name,
           category: field(raw, ["category"]) || null,
           supplier: field(raw, ["supplier"]) || null,
-          reference: field(raw, ["reference", "sku"]) || null,
-          barcode: field(raw, ["barcode"]) || null,
-          purchase_cents: purchase ?? 0,
-          selling_cents: selling ?? 0,
-          stock: parseInt(stockStr, 10) || 0,
-          low_stock: lowStr ? parseInt(lowStr, 10) || null : null,
+          brand: field(raw, ["brand"]) || null,
+          reference: field(raw, ["reference", "ref"]) || null,
+          description: field(raw, ["description", "desc"]) || null,
+          notes: field(raw, ["notes", "note"]) || null,
+          cost_cents: cost.cents,
+          price_cents: price.cents,
+          low_stock: low ? parseInt(low, 10) || null : null,
+          reorder_qty: reorder ? parseInt(reorder, 10) || null : null,
+          out_of_stock_alert: parseFlag(field(raw, ["out_of_stock_alert", "out of stock alert", "oos_alert"])),
+          size: field(raw, ["size"]) || null,
+          color: field(raw, ["color", "colour"]) || null,
+          sku: field(raw, ["sku", "variant sku"]) || null,
+          barcode: field(raw, ["barcode", "ean", "upc"]) || null,
+          stock: parseInt(field(raw, ["stock", "qty", "quantity"]) || "0", 10) || 0,
+          variant_cost_cents: vCost.cents,
+          variant_price_cents: vPrice.cents,
           error,
         };
       });
@@ -108,57 +139,76 @@ export default function BulkImportPage() {
 
   async function downloadTemplate() {
     const { exportRowsToExcel } = await import("@/lib/export");
+    const { catalogExportColumns } = await import("@/lib/pos/catalog-io");
+    const factor = 10 ** currency.decimals;
+    const f = (v: number) => Math.round(v * factor);
     const example = [
       {
-        name: "Classic Crew Tee",
-        category: "T-Shirts",
-        supplier: "Acme Textiles",
-        reference: "SKU-TEE01",
-        barcode: "",
-        purchase_price: 6.5,
-        selling_price: 14.99,
-        stock: 25,
-        low_stock: 5,
+        name: "Classic Crew Tee", category: "T-Shirts", supplier: "Acme Textiles",
+        brand: "Acme", reference: "SKU-TEE01", description: "Soft cotton tee", notes: "",
+        cost_cents: f(6.5), price_cents: f(14.99), low_stock_threshold: 5,
+        reorder_quantity: 20, out_of_stock_alert: 1, size: "S", color: "Red",
+        sku: "", barcode: "", stock: 12, variant_cost_cents: null, variant_price_cents: null,
+      },
+      {
+        name: "Classic Crew Tee", category: "T-Shirts", supplier: "Acme Textiles",
+        brand: "Acme", reference: "SKU-TEE01", description: "Soft cotton tee", notes: "",
+        cost_cents: f(6.5), price_cents: f(14.99), low_stock_threshold: 5,
+        reorder_quantity: 20, out_of_stock_alert: 1, size: "M", color: "Red",
+        sku: "", barcode: "", stock: 8, variant_cost_cents: null, variant_price_cents: null,
+      },
+      {
+        name: "Leather Belt", category: "Accessories", supplier: "", brand: "",
+        reference: "SKU-BELT", description: "", notes: "", cost_cents: f(8),
+        price_cents: f(19.99), low_stock_threshold: 3, reorder_quantity: null,
+        out_of_stock_alert: 1, size: "", color: "", sku: "", barcode: "6134000112233",
+        stock: 30, variant_cost_cents: null, variant_price_cents: null,
       },
     ];
-    await exportRowsToExcel(example, TEMPLATE_COLUMNS, "product-import-template", t("bulkImport.productsSheet"));
+    await exportRowsToExcel(
+      example,
+      catalogExportColumns(currency.decimals),
+      "product-import-template",
+      t("bulkImport.productsSheet"),
+    );
   }
 
   async function runImport() {
-    const importable = rows.filter((r) => !r.error);
-    if (importable.length === 0) {
+    setPolicyOpen(false);
+    if (validRows.length === 0) {
       toast.error(t("bulkImport.noValidRows"));
       return;
     }
     try {
-      const payload: BulkImportRow[] = importable.map((r) => ({
-        name: r.name,
-        category: r.category,
-        supplier: r.supplier,
-        reference: r.reference,
-        barcode: r.barcode,
-        purchase_cents: r.purchase_cents,
-        selling_cents: r.selling_cents,
-        stock: r.stock,
-        low_stock: r.low_stock,
-      }));
-      const res = await importer.mutateAsync(payload);
-      setDone({ created: res.created, failed: res.failed });
+      // PreviewRow extends CatalogImportRow; the extra `error` field is ignored.
+      const res = await importer.mutateAsync({ rows: validRows, policy });
+      setDone(res);
       if (res.failed > 0) {
-        toast.warning(t("bulkImport.importedWithFailures", { created: res.created, failed: res.failed }));
+        toast.warning(
+          t("bulkImport.importedWithIssues", {
+            created: res.productsCreated,
+            updated: res.productsUpdated,
+            failed: res.failed,
+          }),
+        );
         res.errors.slice(0, 5).forEach((m) => toast.error(m));
       } else {
-        toast.success(t("bulkImport.importedProducts", { count: res.created }));
+        toast.success(
+          t("bulkImport.importedSummary", {
+            created: res.productsCreated,
+            updated: res.productsUpdated,
+          }),
+        );
       }
     } catch (e) {
       toast.error(t("bulkImport.importFailed", { error: String(e) }));
     }
   }
 
-  const money = (c: number) => formatMoney(c, currency);
+  const fmt = (c: number | null) => (c == null ? "—" : formatMoney(c, currency));
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4 p-6">
+    <div className="mx-auto max-w-6xl space-y-4 p-6">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon-sm" onClick={() => navigate("/inventory")}>
           <ArrowLeft />
@@ -189,9 +239,7 @@ export default function BulkImportPage() {
         className="hover:bg-accent/40 flex cursor-pointer flex-col items-center gap-1 rounded-lg border border-dashed px-4 py-10 text-center"
       >
         <Upload className="text-muted-foreground size-6" />
-        <p className="text-sm font-medium">
-          {fileName ?? t("bulkImport.dropHint")}
-        </p>
+        <p className="text-sm font-medium">{fileName ?? t("bulkImport.dropHint")}</p>
         <p className="text-muted-foreground text-xs">{t("bulkImport.columnsHint")}</p>
         <input
           ref={inputRef}
@@ -205,30 +253,45 @@ export default function BulkImportPage() {
         />
       </div>
 
+      <div className="text-muted-foreground bg-muted/40 rounded-md border px-3 py-2 text-xs">
+        {t("bulkImport.upsertHint")}
+      </div>
+
       {rows.length > 0 && (
         <>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm">
-              <span className="font-medium">{rows.length}</span> {t("bulkImport.rows")} ·{" "}
-              <span className="text-success">{t("bulkImport.validCount", { count: validCount })}</span>
-              {rows.length - validCount > 0 && (
+              <span className="font-medium">{t("bulkImport.products", { count: productCount })}</span>
+              {" · "}
+              <span>{t("bulkImport.variants", { count: validRows.length })}</span>
+              {rows.length - validRows.length > 0 && (
                 <span className="text-destructive">
-                  {" "}
-                  · {t("bulkImport.withErrors", { count: rows.length - validCount })}
+                  {" · "}
+                  {t("bulkImport.withErrors", { count: rows.length - validRows.length })}
                 </span>
               )}
             </p>
-            <Button onClick={runImport} disabled={importer.isPending || validCount === 0}>
-              <Upload /> {t("bulkImport.importCount", { count: validCount })}
+            <Button
+              onClick={() => setPolicyOpen(true)}
+              disabled={importer.isPending || validRows.length === 0}
+            >
+              <Upload /> {t("bulkImport.importAction", { count: productCount })}
             </Button>
           </div>
 
           {done && (
-            <div className="flex items-center gap-2 rounded-md border border-success/30 bg-success/10 px-3 py-2 text-sm">
-              <CheckCircle2 className="size-4 text-success" />
+            <div className="border-success/30 bg-success/10 flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
+              <CheckCircle2 className="text-success size-4" />
               {done.failed > 0
-                ? t("bulkImport.doneWithFailures", { created: done.created, failed: done.failed })
-                : t("bulkImport.done", { created: done.created })}
+                ? t("bulkImport.doneWithIssues", {
+                    created: done.productsCreated,
+                    updated: done.productsUpdated,
+                    failed: done.failed,
+                  })
+                : t("bulkImport.doneSummary", {
+                    created: done.productsCreated,
+                    updated: done.productsUpdated,
+                  })}
             </div>
           )}
 
@@ -237,8 +300,9 @@ export default function BulkImportPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>{t("common.name")}</TableHead>
-                  <TableHead>{t("inventory.colCategory")}</TableHead>
-                  <TableHead>{t("inventory.form.supplier")}</TableHead>
+                  <TableHead>{t("bulkImport.reference")}</TableHead>
+                  <TableHead>{t("bulkImport.size")}</TableHead>
+                  <TableHead>{t("bulkImport.color")}</TableHead>
                   <TableHead className="text-end">{t("bulkImport.purchase")}</TableHead>
                   <TableHead className="text-end">{t("bulkImport.selling")}</TableHead>
                   <TableHead className="text-end">{t("inventory.stock")}</TableHead>
@@ -249,20 +313,17 @@ export default function BulkImportPage() {
                 {rows.map((r, i) => (
                   <TableRow key={i} className={r.error ? "bg-destructive/5" : ""}>
                     <TableCell className="font-medium">{r.name || "—"}</TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {r.category ?? "—"}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {r.supplier ?? "—"}
-                    </TableCell>
-                    <TableCell className="text-end">{money(r.purchase_cents)}</TableCell>
-                    <TableCell className="text-end">{money(r.selling_cents)}</TableCell>
+                    <TableCell className="text-muted-foreground">{r.reference ?? "—"}</TableCell>
+                    <TableCell className="text-muted-foreground">{r.size ?? "—"}</TableCell>
+                    <TableCell className="text-muted-foreground">{r.color ?? "—"}</TableCell>
+                    <TableCell className="text-end">{fmt(r.cost_cents)}</TableCell>
+                    <TableCell className="text-end">{fmt(r.price_cents)}</TableCell>
                     <TableCell className="text-end">{r.stock}</TableCell>
                     <TableCell>
                       {r.error ? (
-                        <Badge variant="destructive">{r.error}</Badge>
+                        <Badge variant="soft-destructive">{r.error}</Badge>
                       ) : (
-                        <Badge variant="secondary">{t("common.ok")}</Badge>
+                        <Badge variant="soft-success">{t("common.ok")}</Badge>
                       )}
                     </TableCell>
                   </TableRow>
@@ -272,6 +333,44 @@ export default function BulkImportPage() {
           </div>
         </>
       )}
+
+      <Dialog open={policyOpen} onOpenChange={setPolicyOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("bulkImport.stockTitle")}</DialogTitle>
+            <DialogDescription>{t("bulkImport.stockDesc")}</DialogDescription>
+          </DialogHeader>
+          <RadioGroup
+            value={policy}
+            onValueChange={(v) => setPolicy(v as StockPolicy)}
+            className="py-2"
+          >
+            {STOCK_POLICIES.map((p) => (
+              <Label
+                key={p}
+                htmlFor={`policy-${p}`}
+                className="hover:bg-accent/40 flex cursor-pointer items-start gap-3 rounded-md border p-3"
+              >
+                <RadioGroupItem id={`policy-${p}`} value={p} className="mt-0.5" />
+                <span className="space-y-0.5">
+                  <span className="block text-sm font-medium">{t(`bulkImport.policy.${p}`)}</span>
+                  <span className="text-muted-foreground block text-xs">
+                    {t(`bulkImport.policy.${p}Desc`)}
+                  </span>
+                </span>
+              </Label>
+            ))}
+          </RadioGroup>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPolicyOpen(false)}>
+              {t("common.cancel")}
+            </Button>
+            <Button onClick={runImport} disabled={importer.isPending}>
+              <Upload /> {t("bulkImport.runImport")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

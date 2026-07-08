@@ -107,6 +107,8 @@ export interface ReceiptData {
   total_cents: number;
   tendered_cents: number;
   change_cents: number;
+  /** Unpaid balance when the customer settles only part of the total (credit). */
+  remaining_cents: number;
   currency: CurrencyConfig;
 }
 
@@ -136,7 +138,12 @@ function buildReceiptBytes(d: ReceiptData, cols: number): Uint8Array {
     b.row(i18n.t("receipt.discount"), `-${m(d.discount_cents)}`);
   }
   b.bold(true).row(i18n.t("receipt.total"), m(d.total_cents)).bold(false);
-  b.row(i18n.t("receipt.cash"), m(d.tendered_cents)).row(i18n.t("receipt.change"), m(d.change_cents));
+  b.row(i18n.t("receipt.cash"), m(d.tendered_cents));
+  if (d.remaining_cents > 0) {
+    b.bold(true).row(i18n.t("receipt.remaining"), m(d.remaining_cents)).bold(false);
+  } else {
+    b.row(i18n.t("receipt.change"), m(d.change_cents));
+  }
   if (d.footer) b.feed(1).align("center").line(d.footer);
   b.cut();
   return b.build();
@@ -205,7 +212,9 @@ function receiptHtml(d: ReceiptData): string {
       ${d.discount_cents > 0 ? `<tr><td>${esc(i18n.t("receipt.subtotal"))}</td><td style="text-align:right">${m(d.subtotal_cents)}</td></tr><tr><td>${esc(i18n.t("receipt.discount"))}</td><td style="text-align:right">-${m(d.discount_cents)}</td></tr>` : ""}
       <tr class="tot"><td>${esc(i18n.t("receipt.total"))}</td><td style="text-align:right">${m(d.total_cents)}</td></tr>
       <tr><td>${esc(i18n.t("receipt.cash"))}</td><td style="text-align:right">${m(d.tendered_cents)}</td></tr>
-      <tr><td>${esc(i18n.t("receipt.change"))}</td><td style="text-align:right">${m(d.change_cents)}</td></tr>
+      ${d.remaining_cents > 0
+        ? `<tr class="tot"><td>${esc(i18n.t("receipt.remaining"))}</td><td style="text-align:right">${m(d.remaining_cents)}</td></tr>`
+        : `<tr><td>${esc(i18n.t("receipt.change"))}</td><td style="text-align:right">${m(d.change_cents)}</td></tr>`}
     </table>
     ${d.footer ? `<div class="rule"></div><div class="center">${esc(d.footer)}</div>` : ""}
   </body></html>`;

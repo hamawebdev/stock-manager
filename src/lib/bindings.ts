@@ -72,6 +72,32 @@ async dbRestore(src: string) : Promise<Result<null, CommandError>> {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+/**
+ * Replace tauri-plugin-sql's default connection pool (which allows up to 10
+ * SQLite connections) with a single-connection pool.
+ * 
+ * The frontend drives transactions by hand — `withTx` runs
+ * `BEGIN IMMEDIATE` … `COMMIT` as *separate* `execute` calls. The plugin routes
+ * each call to an arbitrary connection from the pool, so with more than one
+ * pooled connection a transaction's statements can land on different physical
+ * connections: `BEGIN IMMEDIATE` takes the write lock on one, a later statement
+ * runs on another and blocks on that lock, and after `busy_timeout` it fails
+ * with "database is locked". Pinning the pool to exactly one connection makes
+ * that split impossible.
+ * 
+ * Called once from the frontend right after `Database.load`, so the plugin has
+ * already created its pool and run migrations on it; this swaps in the pinned
+ * pool afterwards (the previous pool is dropped). Connection reaping is disabled
+ * so the single connection is never replaced mid-transaction.
+ */
+async dbUseSingleConnection() : Promise<Result<null, CommandError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("db_use_single_connection") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 

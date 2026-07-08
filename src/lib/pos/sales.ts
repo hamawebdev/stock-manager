@@ -144,12 +144,21 @@ export async function completeSale(
     const saleId = res.lastInsertId as number;
 
     for (const l of input.lines) {
+      // Snapshot the effective per-unit cost (variant override, else product
+      // default) so COGS / Net Profit stay stable even as the weighted-average
+      // cost later drifts with new purchases.
+      const [c] = await db.select<{ cost: number }[]>(
+        `SELECT COALESCE(v.cost_cents, p.cost_cents, 0) AS cost
+           FROM variants v JOIN products p ON p.id = v.product_id
+          WHERE v.id = $1`,
+        [l.variant_id],
+      );
       await db.execute(
         `INSERT INTO sale_items
            (sale_id, variant_id, description, qty, unit_price_cents,
-            line_discount_cents, line_total_cents)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [saleId, l.variant_id, l.description, l.qty, l.unit_price_cents, l.line_discount_cents, lineTotal(l)],
+            line_discount_cents, line_total_cents, cost_cents)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [saleId, l.variant_id, l.description, l.qty, l.unit_price_cents, l.line_discount_cents, lineTotal(l), c?.cost ?? 0],
       );
       await applyMovement(db, {
         variantId: l.variant_id,

@@ -78,6 +78,7 @@ export function HardwareSettingsCard() {
           total_cents: 1000,
           tendered_cents: 1000,
           change_cents: 0,
+          remaining_cents: 0,
           currency,
         },
         cfg!,

@@ -1,10 +1,9 @@
 /**
- * Bulk catalog operations: spreadsheet import plus multi-select actions
- * (category assignment, archive) for the inventory list. Prices arrive already
- * converted to minor units by the caller (which knows the shop currency).
+ * Bulk catalog operations: name-resolution helpers plus multi-select actions
+ * (category assignment, archive) for the inventory list. The spreadsheet
+ * import/export itself lives in `./catalog-io`.
  */
 import { getDb } from "./db";
-import { createProductWithVariants } from "./product-form";
 
 /** Resolve a category by name, creating it if needed. */
 export async function ensureCategory(name: string): Promise<number> {
@@ -34,83 +33,28 @@ export async function ensureSupplier(name: string): Promise<number> {
   return row.id;
 }
 
-export interface BulkImportRow {
-  name: string;
-  category?: string | null;
-  supplier?: string | null;
-  reference?: string | null;
-  barcode?: string | null;
-  purchase_cents: number;
-  selling_cents: number;
-  stock: number;
-  low_stock?: number | null;
+/** Resolve a size by name, creating it if needed. */
+export async function ensureSize(name: string): Promise<number> {
+  const db = await getDb();
+  const trimmed = name.trim();
+  await db.execute("INSERT OR IGNORE INTO sizes (name) VALUES ($1)", [trimmed]);
+  const [row] = await db.select<{ id: number }[]>(
+    "SELECT id FROM sizes WHERE name = $1",
+    [trimmed],
+  );
+  return row.id;
 }
 
-export interface BulkImportResult {
-  created: number;
-  failed: number;
-  errors: string[];
-}
-
-/**
- * Import products from parsed spreadsheet rows. Each row becomes a simple
- * product (one default variant) with opening stock. Categories and suppliers
- * are matched by name and created on demand. Rows are independent: one bad row
- * does not abort the rest.
- */
-export async function bulkImportProducts(
-  rows: BulkImportRow[],
-): Promise<BulkImportResult> {
-  const result: BulkImportResult = { created: 0, failed: 0, errors: [] };
-  const catCache = new Map<string, number>();
-  const supCache = new Map<string, number>();
-
-  for (let idx = 0; idx < rows.length; idx++) {
-    const r = rows[idx];
-    try {
-      if (!r.name?.trim()) throw new Error("missing name");
-      let categoryId: number | null = null;
-      if (r.category?.trim()) {
-        const key = r.category.trim().toLowerCase();
-        categoryId = catCache.get(key) ?? (await ensureCategory(r.category));
-        catCache.set(key, categoryId);
-      }
-      let supplierId: number | null = null;
-      if (r.supplier?.trim()) {
-        const key = r.supplier.trim().toLowerCase();
-        supplierId = supCache.get(key) ?? (await ensureSupplier(r.supplier));
-        supCache.set(key, supplierId);
-      }
-      await createProductWithVariants({
-        name: r.name.trim(),
-        category_id: categoryId,
-        supplier_id: supplierId,
-        brand: null,
-        reference: r.reference?.trim() || null,
-        description: null,
-        notes: null,
-        cost_cents: r.purchase_cents,
-        price_cents: r.selling_cents,
-        low_stock_threshold: r.low_stock ?? null,
-        reorder_quantity: null,
-        out_of_stock_alert: 1,
-        variants: [
-          {
-            size_id: null,
-            color_id: null,
-            sku: "",
-            barcode: r.barcode?.trim() || null,
-            stock: r.stock || 0,
-          },
-        ],
-      });
-      result.created++;
-    } catch (e) {
-      result.failed++;
-      result.errors.push(`Row ${idx + 2}: ${String(e)}`);
-    }
-  }
-  return result;
+/** Resolve a color by name, creating it if needed. */
+export async function ensureColor(name: string): Promise<number> {
+  const db = await getDb();
+  const trimmed = name.trim();
+  await db.execute("INSERT OR IGNORE INTO colors (name) VALUES ($1)", [trimmed]);
+  const [row] = await db.select<{ id: number }[]>(
+    "SELECT id FROM colors WHERE name = $1",
+    [trimmed],
+  );
+  return row.id;
 }
 
 /** Reassign many products to a category in one statement. */

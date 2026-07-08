@@ -1,8 +1,58 @@
 /**
  * Reporting queries. Day boundaries use SQLite's 'localtime' modifier so
- * "today" matches the shop's wall clock (created_at is stored UTC).
+ * "today" matches the shop's wall clock (created_at is stored UTC). Date-scoped
+ * reports take an inclusive `DateRange` of local 'YYYY-MM-DD' strings (null
+ * bound = unbounded), mirroring the expenses/best-sellers filters.
  */
 import { getDb } from "./db";
+import type { DateRange } from "@/lib/date-ranges";
+
+export type Granularity = "day" | "month";
+
+/**
+ * Chart bucket size for a range: daily for short windows, monthly for long or
+ * unbounded ones so a year-long trend renders ~12 bars instead of 365.
+ */
+export function pickGranularity(range: DateRange): Granularity {
+  if (!range.from || !range.to) return "month";
+  const from = new Date(`${range.from}T00:00:00`);
+  const to = new Date(`${range.to}T00:00:00`);
+  const spanDays = Math.round((to.getTime() - from.getTime()) / 86_400_000) + 1;
+  return spanDays <= 92 ? "day" : "month";
+}
+
+/**
+ * Build a range predicate over one or more table aliases that share the same
+ * window. Pushes the from/to bounds onto `args` once and returns a factory that
+ * emits a `date(<expr>,'localtime')` clause reusing those positional params, so
+ * a statement can filter the same window on several aliases (e.g. a subquery).
+ * Emits "1=1" when a bound is absent, keeping the SQL valid for open ranges.
+ */
+function rangeClauses(range: DateRange, args: unknown[]) {
+  let fromPh = 0;
+  let toPh = 0;
+  if (range.from) {
+    args.push(range.from);
+    fromPh = args.length;
+  }
+  if (range.to) {
+    args.push(range.to);
+    toPh = args.length;
+  }
+  return (expr: string): string => {
+    const parts: string[] = [];
+    if (fromPh) parts.push(`date(${expr},'localtime') >= $${fromPh}`);
+    if (toPh) parts.push(`date(${expr},'localtime') <= $${toPh}`);
+    return parts.length ? parts.join(" AND ") : "1=1";
+  };
+}
+
+/** SQL expression that buckets `col` by day or month, in the shop's local time. */
+function bucketExpr(col: string, granularity: Granularity): string {
+  return granularity === "month"
+    ? `strftime('%Y-%m', ${col}, 'localtime')`
+    : `date(${col},'localtime')`;
+}
 
 export interface TodaySummary {
   sale_count: number;
@@ -47,6 +97,56 @@ export async function getTodaySummary(): Promise<TodaySummary> {
   };
 }
 
+/**
+ * Sales/returns headline summary over an arbitrary `range` (the range-scoped
+ * generalisation of {@link getTodaySummary}, which stays as-is for the payments
+ * insights strip). Sales and returns are aggregated in separate queries.
+ */
+export async function getSalesSummary(range: DateRange): Promise<TodaySummary> {
+  const db = await getDb();
+
+  const salesArgs: unknown[] = [];
+  const salesWhere = rangeClauses(range, salesArgs)("created_at");
+  const [sales] = await db.select<
+    { sale_count: number; net_cents: number; discount_cents: number }[]
+  >(
+    `SELECT COUNT(*) AS sale_count,
+            COALESCE(SUM(total_cents),0) AS net_cents,
+            COALESCE(SUM(cart_discount_cents),0) AS discount_cents
+       FROM sales
+      WHERE status='completed' AND ${salesWhere}`,
+    salesArgs,
+  );
+
+  const itemArgs: unknown[] = [];
+  const itemWhere = rangeClauses(range, itemArgs)("s.created_at");
+  const [items] = await db.select<{ items_sold: number }[]>(
+    `SELECT COALESCE(SUM(si.qty),0) AS items_sold
+       FROM sale_items si JOIN sales s ON s.id = si.sale_id
+      WHERE s.status='completed' AND ${itemWhere}`,
+    itemArgs,
+  );
+
+  const retArgs: unknown[] = [];
+  const retWhere = rangeClauses(range, retArgs)("created_at");
+  const [rets] = await db.select<{ return_count: number; refund_cents: number }[]>(
+    `SELECT COUNT(*) AS return_count,
+            COALESCE(SUM(CASE WHEN net_cash_cents>0 THEN net_cash_cents ELSE 0 END),0) AS refund_cents
+       FROM returns
+      WHERE ${retWhere}`,
+    retArgs,
+  );
+
+  return {
+    sale_count: sales.sale_count,
+    items_sold: items.items_sold,
+    net_cents: sales.net_cents,
+    discount_cents: sales.discount_cents,
+    return_count: rets.return_count,
+    refund_cents: rets.refund_cents,
+  };
+}
+
 export interface ReturnsReportRow {
   id: number;
   code: string;
@@ -67,9 +167,11 @@ export interface ReturnsReport {
   returned_value_cents: number;
 }
 
-/** Returns & refunds over the last `days` days, newest first, with totals. */
-export async function getReturnsReport(days = 30): Promise<ReturnsReport> {
+/** Returns & refunds over `range`, newest first, with totals. */
+export async function getReturnsReport(range: DateRange): Promise<ReturnsReport> {
   const db = await getDb();
+  const args: unknown[] = [];
+  const where = rangeClauses(range, args)("r.created_at");
   const rows = await db.select<ReturnsReportRow[]>(
     `SELECT r.id, r.code, r.created_at,
             s.code AS original_sale_code,
@@ -78,9 +180,9 @@ export async function getReturnsReport(days = 30): Promise<ReturnsReport> {
        FROM returns r
        LEFT JOIN sales s     ON s.id = r.original_sale_id
        LEFT JOIN customers c ON c.id = s.customer_id
-      WHERE date(r.created_at,'localtime') >= date('now','localtime',$1)
+      WHERE ${where}
       ORDER BY r.id DESC`,
-    [`-${days - 1} days`],
+    args,
   );
   const refund_total_cents = rows.reduce(
     (sum, r) => sum + (r.net_cash_cents > 0 ? r.net_cash_cents : 0),
@@ -99,24 +201,28 @@ export async function getReturnsReport(days = 30): Promise<ReturnsReport> {
 }
 
 export interface DayPoint {
-  day: string; // YYYY-MM-DD (local)
+  day: string; // YYYY-MM-DD (day bucket) or YYYY-MM (month bucket), local
   total_cents: number;
   count: number;
 }
 
-/** Net sales per day for the last `days` days (oldest first). */
-export async function getSalesByDay(days = 14): Promise<DayPoint[]> {
+/** Net sales bucketed over `range`, oldest first. */
+export async function getSalesByDay(
+  range: DateRange,
+  granularity: Granularity = "day",
+): Promise<DayPoint[]> {
   const db = await getDb();
+  const args: unknown[] = [];
+  const where = rangeClauses(range, args)("created_at");
   const rows = await db.select<DayPoint[]>(
-    `SELECT date(created_at,'localtime') AS day,
+    `SELECT ${bucketExpr("created_at", granularity)} AS day,
             COALESCE(SUM(total_cents),0) AS total_cents,
             COUNT(*) AS count
        FROM sales
-      WHERE status='completed'
-        AND date(created_at,'localtime') >= date('now','localtime',$1)
+      WHERE status='completed' AND ${where}
       GROUP BY day
       ORDER BY day`,
-    [`-${days - 1} days`],
+    args,
   );
   return rows;
 }
@@ -129,8 +235,15 @@ export interface TopSeller {
   revenue_cents: number;
 }
 
-export async function getTopSellers(days = 30, limit = 10): Promise<TopSeller[]> {
+export async function getTopSellers(
+  range: DateRange,
+  limit = 10,
+): Promise<TopSeller[]> {
   const db = await getDb();
+  const args: unknown[] = [];
+  const where = rangeClauses(range, args)("s.created_at");
+  args.push(limit);
+  const limitPh = args.length;
   return db.select<TopSeller[]>(
     `SELECT p.name AS product_name, sz.name AS size_name, c.name AS color_name,
             SUM(si.qty) AS qty_sold,
@@ -141,11 +254,11 @@ export async function getTopSellers(days = 30, limit = 10): Promise<TopSeller[]>
        JOIN products p ON p.id = v.product_id
        LEFT JOIN sizes sz ON sz.id = v.size_id
        LEFT JOIN colors c ON c.id = v.color_id
-      WHERE date(s.created_at,'localtime') >= date('now','localtime',$1)
+      WHERE ${where}
       GROUP BY si.variant_id
       ORDER BY qty_sold DESC
-      LIMIT $2`,
-    [`-${days - 1} days`, limit],
+      LIMIT $${limitPh}`,
+    args,
   );
 }
 
@@ -276,6 +389,145 @@ export async function getMovementAnalytics(
       ORDER BY units_sold DESC`,
     [`-${days - 1} days`],
   );
+}
+
+export interface ProfitSummary {
+  /** Net sales revenue: completed sales in window, minus returned goods value. */
+  revenue_cents: number;
+  /** Net COGS: cost of goods sold, minus cost recovered by restocked returns. */
+  cogs_cents: number;
+  /** Value of goods returned in window (reduces revenue). */
+  returns_value_cents: number;
+  /** revenue_cents - cogs_cents (restock-aware gross margin after returns). */
+  net_profit_cents: number;
+}
+
+/**
+ * Net Profit over `range` (returns attributed to the day the return was
+ * processed, matching the Returns report and today's summary).
+ *
+ *   Net Profit = (SalesRevenue − ReturnedGoodsValue)
+ *              − (COGS_sold − COGS_recovered_by_restock)
+ *
+ * COGS uses the per-line cost snapshotted at sale time (sale_items.cost_cents).
+ * A restocked return recovers its cost (only the margin is reversed); a
+ * non-restocked (damaged) return recovers nothing, so its full cost is lost.
+ * Partial and repeated returns fall out naturally because each return_in_items
+ * row carries its own qty. Sales and returns are aggregated separately to avoid
+ * fan-out double counting.
+ */
+export async function getProfitSummary(range: DateRange): Promise<ProfitSummary> {
+  const db = await getDb();
+
+  const salesArgs: unknown[] = [];
+  const salesClause = rangeClauses(range, salesArgs);
+  const [sales] = await db.select<{ revenue: number; cogs: number }[]>(
+    `SELECT COALESCE(SUM(s.total_cents),0) AS revenue,
+            COALESCE((
+              SELECT SUM(si.qty * si.cost_cents)
+                FROM sale_items si
+                JOIN sales s2 ON s2.id = si.sale_id
+               WHERE s2.status='completed'
+                 AND ${salesClause("s2.created_at")}
+            ),0) AS cogs
+       FROM sales s
+      WHERE s.status='completed'
+        AND ${salesClause("s.created_at")}`,
+    salesArgs,
+  );
+
+  const retArgs: unknown[] = [];
+  const retWhere = rangeClauses(range, retArgs)("r.created_at");
+  const [rets] = await db.select<{ ret_value: number; ret_cogs: number }[]>(
+    `SELECT COALESCE(SUM(rii.qty * rii.unit_price_cents),0) AS ret_value,
+            COALESCE(SUM(CASE WHEN rii.restock=1
+                          THEN rii.qty * COALESCE(si.cost_cents, v.cost_cents, p.cost_cents, 0)
+                          ELSE 0 END),0) AS ret_cogs
+       FROM return_in_items rii
+       JOIN returns r    ON r.id = rii.return_id
+       LEFT JOIN sale_items si ON si.id = rii.sale_item_id
+       JOIN variants v   ON v.id = rii.variant_id
+       JOIN products p   ON p.id = v.product_id
+      WHERE ${retWhere}`,
+    retArgs,
+  );
+
+  const revenue = sales.revenue - rets.ret_value;
+  const cogs = sales.cogs - rets.ret_cogs;
+  return {
+    revenue_cents: revenue,
+    cogs_cents: cogs,
+    returns_value_cents: rets.ret_value,
+    net_profit_cents: revenue - cogs,
+  };
+}
+
+export interface ProfitDayPoint {
+  day: string; // YYYY-MM-DD (local)
+  profit_cents: number;
+}
+
+/**
+ * Net Profit per bucket over `range` (oldest first). Sales profit is
+ * booked on the sale day; returns are booked on the day they were processed,
+ * so a day can show a negative profit if returns outweigh sales.
+ */
+export async function getProfitByDay(
+  range: DateRange,
+  granularity: Granularity = "day",
+): Promise<ProfitDayPoint[]> {
+  const db = await getDb();
+
+  // Revenue per bucket from the sale header (nets cart-level discount), so the
+  // series sums to the same total as getProfitSummary's revenue.
+  const revArgs: unknown[] = [];
+  const revWhere = rangeClauses(range, revArgs)("created_at");
+  const revRows = await db.select<{ day: string; revenue: number }[]>(
+    `SELECT ${bucketExpr("created_at", granularity)} AS day,
+            COALESCE(SUM(total_cents),0) AS revenue
+       FROM sales
+      WHERE status='completed' AND ${revWhere}
+      GROUP BY day`,
+    revArgs,
+  );
+
+  const cogsArgs: unknown[] = [];
+  const cogsWhere = rangeClauses(range, cogsArgs)("s.created_at");
+  const cogsRows = await db.select<{ day: string; cogs: number }[]>(
+    `SELECT ${bucketExpr("s.created_at", granularity)} AS day,
+            COALESCE(SUM(si.qty * si.cost_cents),0) AS cogs
+       FROM sale_items si
+       JOIN sales s ON s.id = si.sale_id AND s.status='completed'
+      WHERE ${cogsWhere}
+      GROUP BY day`,
+    cogsArgs,
+  );
+
+  const retArgs: unknown[] = [];
+  const retWhere = rangeClauses(range, retArgs)("r.created_at");
+  const retRows = await db.select<{ day: string; reversed: number }[]>(
+    `SELECT ${bucketExpr("r.created_at", granularity)} AS day,
+            COALESCE(SUM(rii.qty * rii.unit_price_cents
+                         - CASE WHEN rii.restock=1
+                                THEN rii.qty * COALESCE(si.cost_cents, v.cost_cents, p.cost_cents, 0)
+                                ELSE 0 END),0) AS reversed
+       FROM return_in_items rii
+       JOIN returns r    ON r.id = rii.return_id
+       LEFT JOIN sale_items si ON si.id = rii.sale_item_id
+       JOIN variants v   ON v.id = rii.variant_id
+       JOIN products p   ON p.id = v.product_id
+      WHERE ${retWhere}
+      GROUP BY day`,
+    retArgs,
+  );
+
+  const byDay = new Map<string, number>();
+  for (const r of revRows) byDay.set(r.day, (byDay.get(r.day) ?? 0) + r.revenue);
+  for (const r of cogsRows) byDay.set(r.day, (byDay.get(r.day) ?? 0) - r.cogs);
+  for (const r of retRows) byDay.set(r.day, (byDay.get(r.day) ?? 0) - r.reversed);
+  return [...byDay.entries()]
+    .map(([day, profit_cents]) => ({ day, profit_cents }))
+    .sort((a, b) => a.day.localeCompare(b.day));
 }
 
 export interface InventoryValuation {

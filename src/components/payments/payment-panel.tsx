@@ -1,7 +1,7 @@
 /**
  * Payment processing panel (Sell mode). Shows the live total with automatic
  * promotions + manual discounts, an optional TVA breakdown, a payment-mode
- * selector, an on-screen numeric keypad, and one-click confirmation. A named
+ * selector, an amount-received field, and one-click confirmation. A named
  * customer may settle on credit (paid below the total → Reste Dû on their
  * account); walk-ins must pay in full. Reuses the cart store, the promotions
  * engine, and the existing sale/receipt/drawer pipeline.
@@ -28,7 +28,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Delete, UserPlus, X } from "lucide-react";
+import { UserPlus, X } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -69,12 +69,19 @@ interface Props {
   onCompleted?: (saleCode: string) => void;
 }
 
-/** Round a total up to common cash denominations for quick-tender buttons. */
-function quickAmounts(total: number, factor: number): number[] {
-  const steps = [1, 2, 5, 10, 20].map((d) => d * factor);
-  const set = new Set<number>([total]);
-  for (const step of steps) set.add(Math.ceil(total / step) * step);
-  return [...set].filter((v) => v >= total).sort((a, b) => a - b).slice(0, 6);
+/** Keep only what forms a valid decimal amount: digits plus a single separator
+ *  (dropped entirely for whole-unit currencies), trimmed to the currency's
+ *  fractional precision. Lets the cashier type/paste directly into the field. */
+function sanitizeAmount(raw: string, decimals: number): string {
+  let s = raw.replace(/[^\d.]/g, "");
+  if (decimals === 0) return s.replace(/\./g, "").replace(/^0+(?=\d)/, "");
+  const dot = s.indexOf(".");
+  if (dot !== -1) {
+    const whole = s.slice(0, dot).replace(/\./g, "");
+    const frac = s.slice(dot + 1).replace(/\./g, "").slice(0, decimals);
+    s = `${whole}.${frac}`;
+  }
+  return s.replace(/^0+(?=\d)/, "");
 }
 
 export function PaymentPanel({ onOpenCustomer, onCompleted }: Props) {
@@ -101,7 +108,6 @@ export function PaymentPanel({ onOpenCustomer, onCompleted }: Props) {
   const [tvaRate, setTvaRate] = useState<number | null>(null);
   const [guardOpen, setGuardOpen] = useState(false);
 
-  const factor = 10 ** currency.decimals;
   const subtotal = cartSubtotalCents(lines);
   const manualDiscount = cartDiscountCents(lines, cartDiscount);
   const promo = useMemo(
@@ -133,13 +139,6 @@ export function PaymentPanel({ onOpenCustomer, onCompleted }: Props) {
     queryFn: () => getCustomer(customerId as number),
     enabled: customerId != null,
   });
-
-  function pushDigit(d: string) {
-    setPaidInput((p) => {
-      if (d === "." && p.includes(".")) return p;
-      return (p + d).replace(/^0+(?=\d)/, "");
-    });
-  }
 
   async function confirm() {
     if (!enough) return;
@@ -189,6 +188,7 @@ export function PaymentPanel({ onOpenCustomer, onCompleted }: Props) {
         total_cents: sale.total_ttc_cents,
         tendered_cents: paidCents,
         change_cents: sale.change_cents,
+        remaining_cents: resteDu,
         currency: recCurrency,
       };
       try {
@@ -351,8 +351,8 @@ export function PaymentPanel({ onOpenCustomer, onCompleted }: Props) {
         if (e.key === "Enter") confirm();
       }}
     >
-      {/* Scrollable controls — totals/quick-amounts/keypad scroll here so the
-          Charge button below stays pinned and always visible. */}
+      {/* Scrollable controls — totals scroll here so the Charge button below
+          stays pinned and always visible. */}
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pe-1">
         {/* Customer chip */}
         <button
@@ -461,61 +461,26 @@ export function PaymentPanel({ onOpenCustomer, onCompleted }: Props) {
           )}
         </div>
 
-        {/* Quick amounts */}
-        <div className="flex flex-wrap gap-1.5">
-          {quickAmounts(total, factor).map((amt) => (
-            <Button
-              key={amt}
-              variant="outline"
-              size="sm"
-              disabled={lines.length === 0}
-              onClick={() => setPaidInput(formatMoney(amt, { ...currency, symbol: "" }))}
-            >
-              {formatMoney(amt, currency)}
-            </Button>
-          ))}
-        </div>
-
-        {/* Numeric keypad */}
-        <div className="grid grid-cols-3 gap-1.5">
-          {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((d) => (
-            <Button
-              key={d}
-              variant="outline"
-              className="h-12 text-lg"
-              onClick={() => pushDigit(d)}
-            >
-              {d}
-            </Button>
-          ))}
-          {currency.decimals > 0 ? (
-            <Button variant="outline" className="h-12 text-lg" onClick={() => pushDigit(".")}>
-              .
-            </Button>
-          ) : (
-            <Button variant="outline" className="h-12 text-lg" onClick={() => pushDigit("00")}>
-              00
-            </Button>
-          )}
-          <Button variant="outline" className="h-12 text-lg" onClick={() => pushDigit("0")}>
-            0
-          </Button>
-          <Button
-            variant="outline"
-            className="h-12"
-            onClick={() => setPaidInput((p) => p.slice(0, -1))}
-          >
-            <Delete />
-          </Button>
-        </div>
-
       </div>
 
-      {/* Pinned footer — amount paid + Charge, always in view. */}
+      {/* Pinned footer — amount received + Charge, always in view. */}
       <div className="mt-3 grid shrink-0 gap-2 border-t pt-3">
-        <div className="bg-muted/50 flex items-center justify-between rounded-md px-3 py-2 text-sm">
-          <span className="text-muted-foreground">{t("payments.pay.amountPaid")}</span>
-          <span className="font-medium">{formatMoney(paidCents, currency)}</span>
+        <div className="flex items-center gap-2">
+          <label htmlFor="amount-received" className="text-muted-foreground text-sm">
+            {t("payments.pay.amountReceived")}
+          </label>
+          <Input
+            id="amount-received"
+            inputMode="decimal"
+            value={paidInput}
+            onChange={(e) => setPaidInput(sanitizeAmount(e.target.value, currency.decimals))}
+            placeholder={formatMoney(total, { ...currency, symbol: "" })}
+            disabled={lines.length === 0}
+            className="ms-auto h-11 w-40 text-end text-lg font-semibold"
+          />
+          {currency.symbol && (
+            <span className="text-muted-foreground text-sm">{currency.symbol}</span>
+          )}
         </div>
         <Button
           className="h-14 text-base"

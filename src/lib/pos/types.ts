@@ -265,6 +265,8 @@ export interface SaleItem {
   line_discount_cents: number;
   line_total_cents: number;
   qty_returned: number;
+  /** Effective per-unit cost snapshotted at sale time (HT). Basis for COGS. */
+  cost_cents: number;
 }
 
 /** A returns row joined to its original sale code + customer, for history/reports. */

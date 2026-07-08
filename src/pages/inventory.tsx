@@ -27,6 +27,7 @@ import {
   TrendingUp,
   Brain,
   FileSpreadsheet,
+  Download,
   Archive,
   ImageIcon,
   Tags,
@@ -60,6 +61,7 @@ export default function InventoryPage() {
   const [checked, setChecked] = useState<Set<number>>(new Set());
   const [bulkCategory, setBulkCategory] = useState<string>("");
   const [designerOpen, setDesignerOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const filtered = useMemo(() => {
     const list = products.data ?? [];
@@ -135,6 +137,9 @@ export default function InventoryPage() {
           <Button variant="outline" onClick={() => navigate("/inventory/import")}>
             <FileSpreadsheet /> {t("common.import")}
           </Button>
+          <Button variant="outline" disabled={exporting} onClick={exportCatalog}>
+            <Download /> {t("common.export")}
+          </Button>
           <Button variant="outline" onClick={() => setDesignerOpen(true)}>
             <Tags /> {t("labelDesigner.launch")}
           </Button>
@@ -209,6 +214,7 @@ export default function InventoryPage() {
               <TableHead>{t("inventory.colBrand")}</TableHead>
               <TableHead className="text-end">{t("inventory.colVariants")}</TableHead>
               <TableHead className="text-end">{t("inventory.colOnHand")}</TableHead>
+              <TableHead className="text-end">{t("inventory.colTotalPaid")}</TableHead>
               <TableHead className="text-end">{t("common.price")}</TableHead>
             </TableRow>
           </TableHeader>
@@ -246,13 +252,16 @@ export default function InventoryPage() {
                   </Badge>
                 </TableCell>
                 <TableCell className="text-end">
+                  {formatMoney(p.total_paid_cents, currency)}
+                </TableCell>
+                <TableCell className="text-end">
                   {formatMoney(p.price_cents, currency)}
                 </TableCell>
               </TableRow>
             ))}
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="py-12 text-center">
+                <TableCell colSpan={8} className="py-12 text-center">
                   <Package className="text-muted-foreground mx-auto mb-2 size-8" />
                   <p className="text-muted-foreground text-sm">
                     {products.isLoading
@@ -284,6 +293,34 @@ export default function InventoryPage() {
 
   function openEdit(p: ProductSummary) {
     navigate(`/inventory/${p.id}/edit`);
+  }
+
+  /** Export the full active catalog (one row per variant) to Excel. */
+  async function exportCatalog() {
+    setExporting(true);
+    try {
+      const [{ listCatalogForExport, catalogExportColumns }, { exportRowsToExcel }] =
+        await Promise.all([
+          import("@/lib/pos/catalog-io"),
+          import("@/lib/export"),
+        ]);
+      const rows = await listCatalogForExport();
+      if (rows.length === 0) {
+        toast.error(t("inventory.exportEmpty"));
+        return;
+      }
+      const date = new Date().toISOString().slice(0, 10);
+      await exportRowsToExcel(
+        rows,
+        catalogExportColumns(currency.decimals),
+        `products-export-${date}`,
+        t("bulkImport.productsSheet"),
+      );
+    } catch (e) {
+      toast.error(t("inventory.exportFailed", { error: String(e) }));
+    } finally {
+      setExporting(false);
+    }
   }
 }
 

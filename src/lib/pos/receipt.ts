@@ -27,6 +27,7 @@ export function buildReceiptFromSale(
     total_cents: sale.total_cents,
     tendered_cents: sale.cash_tendered_cents,
     change_cents: sale.change_cents,
+    remaining_cents: Math.max(0, sale.total_cents - sale.paid_cents),
     currency,
   };
 }

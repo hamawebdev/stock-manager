@@ -20,6 +20,7 @@ import * as customerPayments from "./customer-payments";
 import * as productForm from "./product-form";
 import * as activity from "./activity";
 import * as bulk from "./bulk";
+import * as catalogIo from "./catalog-io";
 import * as customers from "./customers";
 import * as promotions from "./promotions";
 import * as held from "./held";
@@ -44,6 +45,8 @@ import {
 } from "./label-template";
 import type { ShopSettings } from "./types";
 import type { CurrencyConfig } from "@/lib/money";
+import type { DateRange } from "@/lib/date-ranges";
+import type { Granularity } from "./reports";
 
 export const qk = {
   settings: ["settings"] as const,
@@ -203,24 +206,50 @@ export function useTodaySummary() {
   return useQuery({ queryKey: ["report-today"], queryFn: reports.getTodaySummary });
 }
 
-export function useSalesByDay(days = 14) {
+/** Sales/returns headline over `range`. Pass `null` (e.g. an unbounded previous
+ *  period) to skip the fetch — used by the period-over-period comparison. */
+export function useSalesSummary(range: DateRange | null) {
   return useQuery({
-    queryKey: ["report-sales-by-day", days],
-    queryFn: () => reports.getSalesByDay(days),
+    queryKey: ["report-sales-summary", range?.from ?? null, range?.to ?? null],
+    queryFn: () => reports.getSalesSummary(range as DateRange),
+    enabled: range != null,
   });
 }
 
-export function useTopSellers(days = 30, limit = 10) {
+export function useSalesByDay(range: DateRange, granularity: Granularity) {
   return useQuery({
-    queryKey: ["report-top-sellers", days, limit],
-    queryFn: () => reports.getTopSellers(days, limit),
+    queryKey: ["report-sales-by-day", range.from, range.to, granularity],
+    queryFn: () => reports.getSalesByDay(range, granularity),
   });
 }
 
-export function useReturnsReport(days = 30) {
+export function useTopSellers(range: DateRange, limit = 10) {
   return useQuery({
-    queryKey: ["report-returns", days],
-    queryFn: () => reports.getReturnsReport(days),
+    queryKey: ["report-top-sellers", range.from, range.to, limit],
+    queryFn: () => reports.getTopSellers(range, limit),
+  });
+}
+
+export function useReturnsReport(range: DateRange) {
+  return useQuery({
+    queryKey: ["report-returns", range.from, range.to],
+    queryFn: () => reports.getReturnsReport(range),
+  });
+}
+
+/** Net profit over `range`. Pass `null` to skip (previous-period comparison). */
+export function useProfitSummary(range: DateRange | null) {
+  return useQuery({
+    queryKey: ["report-profit", range?.from ?? null, range?.to ?? null],
+    queryFn: () => reports.getProfitSummary(range as DateRange),
+    enabled: range != null,
+  });
+}
+
+export function useProfitByDay(range: DateRange, granularity: Granularity) {
+  return useQuery({
+    queryKey: ["report-profit-by-day", range.from, range.to, granularity],
+    queryFn: () => reports.getProfitByDay(range, granularity),
   });
 }
 
@@ -377,14 +406,22 @@ export function useDuplicateProduct() {
 
 // --- Bulk operations -------------------------------------------------------
 
-export function useBulkImport() {
+export function useImportCatalog() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (rows: bulk.BulkImportRow[]) => bulk.bulkImportProducts(rows),
+    mutationFn: ({
+      rows,
+      policy,
+    }: {
+      rows: catalogIo.CatalogImportRow[];
+      policy: catalogIo.StockPolicy;
+    }) => catalogIo.importCatalog(rows, policy),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.products });
       qc.invalidateQueries({ queryKey: qk.categories });
       qc.invalidateQueries({ queryKey: qk.suppliers });
+      qc.invalidateQueries({ queryKey: qk.sizes });
+      qc.invalidateQueries({ queryKey: qk.colors });
     },
   });
 }
@@ -628,6 +665,20 @@ export function useUpdateVariant(productId: number) {
 
 // --- Sales -----------------------------------------------------------------
 
+/**
+ * Invalidate every cache that displays on-hand stock, so a sale/return/restock
+ * is reflected immediately. `qk.products` alone is not enough: the Payments page
+ * reads stock from the products-page grid, the POS/purchasing variant searches
+ * and the per-product variant list, none of which share that key.
+ */
+function invalidateInventoryViews(qc: ReturnType<typeof useQueryClient>) {
+  qc.invalidateQueries({ queryKey: qk.products });
+  qc.invalidateQueries({ queryKey: ["products-page"] });
+  qc.invalidateQueries({ queryKey: ["pos-variant-search"] });
+  qc.invalidateQueries({ queryKey: ["variant-search"] });
+  qc.invalidateQueries({ queryKey: ["variants"] });
+}
+
 /** All completed sales with customer names — the Studio "Ventes" source list. */
 export function useSales() {
   return useQuery({ queryKey: qk.sales, queryFn: () => sales.listSales() });
@@ -638,9 +689,15 @@ export function useCompleteSale() {
   return useMutation({
     mutationFn: (input: sales.CompleteSaleInput) => sales.completeSale(input),
     onSuccess: (_d, input) => {
-      qc.invalidateQueries({ queryKey: qk.products });
+      invalidateInventoryViews(qc);
       qc.invalidateQueries({ queryKey: qk.sales });
       qc.invalidateQueries({ queryKey: qk.cashBreakdown });
+      qc.invalidateQueries({ queryKey: ["report-today"] });
+      qc.invalidateQueries({ queryKey: ["report-sales-summary"] });
+      qc.invalidateQueries({ queryKey: ["report-sales-by-day"] });
+      qc.invalidateQueries({ queryKey: ["report-top-sellers"] });
+      qc.invalidateQueries({ queryKey: ["report-profit"] });
+      qc.invalidateQueries({ queryKey: ["report-profit-by-day"] });
       if (input.customer_id != null) {
         qc.invalidateQueries({ queryKey: qk.customerBalance(input.customer_id) });
         qc.invalidateQueries({ queryKey: qk.customerPayments(input.customer_id) });
@@ -729,7 +786,7 @@ export function useProcessReturn() {
     mutationFn: (input: returns.ProcessReturnInput) =>
       returns.processReturn(input),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: qk.products });
+      invalidateInventoryViews(qc);
       qc.invalidateQueries({ queryKey: qk.sales });
       qc.invalidateQueries({ queryKey: qk.returns });
       // Refresh the transaction-history list, customer purchase history and
@@ -738,7 +795,10 @@ export function useProcessReturn() {
       qc.invalidateQueries({ queryKey: ["recent-returns"] });
       qc.invalidateQueries({ queryKey: ["customer-history"] });
       qc.invalidateQueries({ queryKey: ["report-today"] });
+      qc.invalidateQueries({ queryKey: ["report-sales-summary"] });
       qc.invalidateQueries({ queryKey: ["report-returns"] });
+      qc.invalidateQueries({ queryKey: ["report-profit"] });
+      qc.invalidateQueries({ queryKey: ["report-profit-by-day"] });
     },
   });
 }

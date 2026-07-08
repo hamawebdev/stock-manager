@@ -90,6 +90,9 @@ export interface ProductSummary extends Product {
   supplier_name: string | null;
   variant_count: number;
   total_stock: number;
+  /** On-hand cost value: Σ(stock × effective cost) across the product's active
+   *  variants. Displayed as "Total Amount Paid". Tax-excluded (HT). */
+  total_paid_cents: number;
   primary_image_path: string | null;
 }
 
@@ -97,6 +100,7 @@ const PRODUCT_SUMMARY_SELECT = `
   SELECT p.*, c.name AS category_name, sup.name AS supplier_name,
          COUNT(v.id) AS variant_count,
          COALESCE(SUM(v.stock), 0) AS total_stock,
+         COALESCE(SUM(v.stock * COALESCE(v.cost_cents, p.cost_cents)), 0) AS total_paid_cents,
          (SELECT pi.path FROM product_images pi
            WHERE pi.product_id = p.id
            ORDER BY pi.is_primary DESC, pi.sort_order, pi.id LIMIT 1) AS primary_image_path

@@ -38,7 +38,7 @@ import {
   resolveRange,
   RANGE_PRESETS,
   type RangePreset,
-} from "@/components/expenses/date-ranges";
+} from "@/lib/date-ranges";
 import {
   useExpenseCategories,
   useExpenseMethods,

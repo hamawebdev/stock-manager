@@ -44,6 +44,7 @@ export function ProductDetailSheet({
   onEditProduct,
 }: Props) {
   const { t } = useTranslation();
+  const currency = useCurrency();
   const open = !!product;
   const variants = useProductVariants(product?.id ?? null);
   const [matrixOpen, setMatrixOpen] = useState(false);
@@ -72,6 +73,21 @@ export function ProductDetailSheet({
                 </Button>
               </div>
             </SheetHeader>
+
+            <div className="grid grid-cols-3 gap-3 px-4">
+              <SummaryStat
+                label={t("inventory.colOnHand")}
+                value={String(product.total_stock)}
+              />
+              <SummaryStat
+                label={t("inventory.colVariants")}
+                value={String(product.variant_count)}
+              />
+              <SummaryStat
+                label={t("inventory.colTotalPaid")}
+                value={formatMoney(product.total_paid_cents, currency)}
+              />
+            </div>
 
             <div className="flex items-center justify-between px-4">
               <h3 className="text-sm font-medium">
@@ -129,6 +145,15 @@ export function ProductDetailSheet({
         )}
       </SheetContent>
     </Sheet>
+  );
+}
+
+function SummaryStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="bg-muted/40 rounded-lg border px-3 py-2">
+      <p className="text-muted-foreground text-xs">{label}</p>
+      <p className="text-lg font-semibold">{value}</p>
+    </div>
   );
 }
 
