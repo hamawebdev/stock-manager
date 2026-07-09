@@ -49,6 +49,15 @@ tauri-plugin-sql = { git = "https://github.com/tauri-apps/plugins-workspace", br
 # The plugins-workspace `v1` branch of tauri-plugin-sql depends on `sqlx = "^0.8"`.
 sqlx = { version = "0.8", features = ["sqlite", "runtime-tokio"] }
 
+# Force indexmap 1.x's `std` feature on (feature-unifies onto the indexmap 1.9.3
+# instance that kuchikiki — via wry/tao — depends on). kuchikiki writes
+# `IndexMap<K, V>`, relying on the default hasher `S = RandomState`, which
+# indexmap 1.9 only defines under `#[cfg(has_std)]`. Its build.rs emits `has_std`
+# directly when the `std` FEATURE is set, but otherwise autocfg-probes the
+# sysroot for `std` — which FAILS under `-Z build-std`, since the Tier-3 Win7
+# target has no prebuilt std to probe. Enabling the feature skips that probe.
+indexmap = { version = "1", features = ["std"] }
+
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-single-instance = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "v1" }
 tauri-plugin-window-state = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "v1" }
