@@ -38,9 +38,9 @@ jobs:
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Compile std from source for the Tier-3 Win7 target (no prebuilt std).
-          # Requires the nightly toolchain + rust-src installed above.
-          CARGO_UNSTABLE_BUILD_STD: "std,panic_abort"
+          # The Win7 Tier-3 target + build-std are configured in
+          # src-tauri/.cargo/config.toml (not via --target, which the tauri v1
+          # CLI would reject). Nothing target-related is passed here.
           # Uncomment after generating signing keys with `npm run tauri signer generate`
           # TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           # TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
@@ -50,5 +50,3 @@ jobs:
           releaseBody: "See the assets to download and install this version."
           releaseDraft: true
           prerelease: false
-          # Build for the Tier-3 Windows 7 target.
-          args: --target x86_64-win7-windows-msvc

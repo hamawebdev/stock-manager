@@ -1,0 +1,16 @@
+# Windows 7 build configuration (Tier-3 `x86_64-win7-windows-msvc` target).
+#
+# The target is set HERE rather than via `tauri build --target ...` because the
+# tauri v1 CLI validates an explicit `--target` against `rustup target list`,
+# which never contains a Tier-3 target (it has no prebuilt std to install). By
+# setting it in cargo config, cargo builds for Win7 and tauri finds the binary
+# from cargo's build output — no CLI validation.
+#
+# std is compiled from source (`build-std`) because the Tier-3 target ships no
+# prebuilt std; this needs the nightly toolchain + the `rust-src` component
+# (see ../rust-toolchain.toml).
+[build]
+target = "x86_64-win7-windows-msvc"
+
+[unstable]
+build-std = ["std", "panic_abort"]
