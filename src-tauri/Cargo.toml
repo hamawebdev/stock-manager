@@ -47,10 +47,10 @@ tauri-plugin-sql = { git = "https://github.com/tauri-apps/plugins-workspace", br
 
 # Used only to swap tauri-plugin-sql's default connection pool for a
 # single-connection one (see `db_use_single_connection`). Version/features MUST
-# match what the v1 tauri-plugin-sql pulls in so the `Pool<Sqlite>` types unify.
-# The v1 SQL plugin uses sqlx 0.7 with the tokio runtime. If CI reports a type
-# mismatch here, align this version with the plugin's actual sqlx dependency.
-sqlx = { version = "0.7", features = ["sqlite", "runtime-tokio"] }
+# match what the v1 tauri-plugin-sql pulls in so the `Pool<Sqlite>` types unify
+# and only one `libsqlite3-sys` (a `links = "sqlite3"` crate) is in the tree.
+# The plugins-workspace `v1` branch of tauri-plugin-sql depends on `sqlx = "^0.8"`.
+sqlx = { version = "0.8", features = ["sqlite", "runtime-tokio"] }
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-single-instance = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "v1" }
