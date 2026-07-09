@@ -52,6 +52,18 @@ tauri-plugin-sql = { git = "https://github.com/tauri-apps/plugins-workspace", br
 # The plugins-workspace `v1` branch of tauri-plugin-sql depends on `sqlx = "^0.8"`.
 sqlx = { version = "0.8", features = ["sqlite", "runtime-tokio"] }
 
+# --- Windows 7 / Rust 1.77 transitive-dependency pins ---
+# Newer releases of these crates switched to the Rust 2024 edition (the
+# `edition2024` cargo feature), which needs Rust 1.85+ and therefore won't build
+# on our pinned 1.77 toolchain. They are pulled in transitively; pin each to its
+# last edition-2021 release. Revisit only if the Rust pin is ever raised.
+#
+# `idna_adapter` >= 1.2 drags in ICU4X 2.0 (litemap 0.8, zerovec 0.11, zerofrom,
+# yoke, icu_* …, all edition2024) via url -> idna; 1.1.x keeps ICU4X 1.5.
+idna_adapter = "=1.1.0"
+# `base64ct` >= 1.7 requires edition2024; pulled via the rsa/pkcs stack.
+base64ct = "=1.6.0"
+
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-single-instance = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "v1" }
 tauri-plugin-window-state = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "v1" }
