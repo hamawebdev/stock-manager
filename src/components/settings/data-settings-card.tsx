@@ -46,7 +46,7 @@ export function DataSettingsCard() {
       if (!selected || typeof selected !== "string") return;
       const ok = await confirm(t("settings.data.restoreConfirm"), {
         title: t("settings.data.restoreTitle"),
-        kind: "warning",
+        type: "warning",
       });
       if (!ok) return;
       setBusy(true);
