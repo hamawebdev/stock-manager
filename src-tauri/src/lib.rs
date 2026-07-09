@@ -121,6 +121,8 @@ fn db_restore(app: tauri::AppHandle, src: String) -> Result<(), CommandError> {
 /// Note (v1): the v1 SQL plugin stores instances as
 /// `DbInstances(Mutex<HashMap<String, Pool<Sqlite>>>)` — a plain `Pool`, not a
 /// `DbPool` enum, behind a tokio `Mutex` — hence `.lock()` and a bare `pool`.
+/// Upstream keeps `DbInstances` private; the plugin is vendored at
+/// `src-tauri/vendored/tauri-plugin-sql` with the type made `pub`.
 #[tauri::command]
 async fn db_use_single_connection(
     app: tauri::AppHandle,

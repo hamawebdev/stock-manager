@@ -37,16 +37,18 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "1"
 
-# v1 plugins (git `v1` branch — these were not all published to crates.io for v1).
-tauri-plugin-sql = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "v1", features = [
+# Vendored copy of the plugins-workspace `v1` sql plugin (commit 1e407ed5).
+# The git v1 plugin keeps `DbInstances` private, but `db_use_single_connection`
+# must reach into it to swap the pool — the vendored copy makes it `pub`.
+tauri-plugin-sql = { path = "vendored/tauri-plugin-sql", features = [
     "sqlite",
 ] }
 
 # Used only to swap tauri-plugin-sql's default connection pool for a
 # single-connection one (see `db_use_single_connection`). Version/features MUST
-# match what the v1 tauri-plugin-sql pulls in so the `Pool<Sqlite>` types unify
-# and only one `libsqlite3-sys` (a `links = "sqlite3"` crate) is in the tree.
-# The plugins-workspace `v1` branch of tauri-plugin-sql depends on `sqlx = "^0.8"`.
+# match what the vendored tauri-plugin-sql pulls in so the `Pool<Sqlite>` types
+# unify and only one `libsqlite3-sys` (a `links = "sqlite3"` crate) is in the
+# tree. The vendored plugin depends on `sqlx = "^0.8"`.
 sqlx = { version = "0.8", features = ["sqlite", "runtime-tokio"] }
 
 # Force indexmap 1.x's `std` feature on (feature-unifies onto the indexmap 1.9.3
