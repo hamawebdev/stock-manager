@@ -647,7 +647,10 @@
       "sku": "SKU",
       "nounItem": "élément",
       "createNoun": "Créer {{noun}} « {{value}} »",
-      "addNoun": "Ajouter {{noun}}"
+      "addNoun": "Ajouter {{noun}}",
+      "nameRequired": "Le nom est requis",
+      "supplierAdded": "Fournisseur ajouté",
+      "categoryAdded": "Catégorie ajoutée"
     },
     "variantEditor": {
       "selectSizeColor": "Sélectionnez au moins une taille ou une couleur",

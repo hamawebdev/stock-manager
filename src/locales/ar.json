@@ -655,7 +655,10 @@
       "sku": "SKU",
       "nounItem": "عنصر",
       "createNoun": "إنشاء {{noun}} «{{value}}»",
-      "addNoun": "إضافة {{noun}}"
+      "addNoun": "إضافة {{noun}}",
+      "nameRequired": "الاسم مطلوب",
+      "supplierAdded": "تمت إضافة المورد",
+      "categoryAdded": "تمت إضافة الفئة"
     },
     "variantEditor": {
       "selectSizeColor": "اختر مقاسًا أو لونًا واحدًا على الأقل",

@@ -26,9 +26,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useCategories,
-  useCreateCategory,
   useSuppliers,
-  useCreateSupplier,
   useCurrency,
   useInventorySettings,
   useCreateProductFull,
@@ -51,6 +49,8 @@ import {
 import { printLabel } from "@/lib/pos/hardware";
 import { formatMoney, parseMoney } from "@/lib/money";
 import { EntityCombobox } from "./entity-combobox";
+import { SupplierCreateDialog } from "./supplier-create-dialog";
+import { CategoryCreateDialog } from "./category-create-dialog";
 import { BarcodePreview } from "./barcode-preview";
 import { ImageUploader, type UploaderImage } from "./image-uploader";
 import { VariantEditor, type VariantRow } from "./variant-editor";
@@ -110,13 +110,14 @@ export function ProductForm({ mode, initial }: Props) {
   const qc = useQueryClient();
   const categories = useCategories();
   const suppliers = useSuppliers();
-  const createCategory = useCreateCategory();
-  const createSupplier = useCreateSupplier();
   const inv = useInventorySettings();
   const createProduct = useCreateProductFull();
   const updateProduct = useUpdateProductFull();
   const duplicate = useDuplicateProduct();
   const archive = useArchiveProduct();
+
+  const [supplierDialogOpen, setSupplierDialogOpen] = useState(false);
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
 
   const symbology = inv.data?.barcode_symbology ?? "ean13";
   const barcodePrefix = inv.data?.barcode_prefix ?? "20";
@@ -580,7 +581,7 @@ export function ProductForm({ mode, initial }: Props) {
                     }))}
                     value={form.categoryId}
                     onChange={(id) => set("categoryId", id)}
-                    onCreate={(name) => createCategory.mutateAsync(name)}
+                    onAddClick={() => setCategoryDialogOpen(true)}
                     placeholder={t("inventory.uncategorized")}
                     noun={t("inventory.form.nounCategory")}
                   />
@@ -788,7 +789,7 @@ export function ProductForm({ mode, initial }: Props) {
                 }))}
                 value={form.supplierId}
                 onChange={(id) => set("supplierId", id)}
-                onCreate={(name) => createSupplier.mutateAsync({ name })}
+                onAddClick={() => setSupplierDialogOpen(true)}
                 placeholder={t("inventory.form.noSupplier")}
                 noun={t("inventory.form.nounSupplier")}
               />
@@ -824,6 +825,17 @@ export function ProductForm({ mode, initial }: Props) {
           )}
         </div>
       </div>
+
+      <SupplierCreateDialog
+        open={supplierDialogOpen}
+        onOpenChange={setSupplierDialogOpen}
+        onCreated={(id) => set("supplierId", id)}
+      />
+      <CategoryCreateDialog
+        open={categoryDialogOpen}
+        onOpenChange={setCategoryDialogOpen}
+        onCreated={(id) => set("categoryId", id)}
+      />
     </div>
   );
 }

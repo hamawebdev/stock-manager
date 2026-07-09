@@ -29,6 +29,12 @@ interface Props {
   onChange: (id: number | null) => void;
   /** Inline create: receives the typed name, returns the new id to auto-select. */
   onCreate?: (name: string) => Promise<number>;
+  /**
+   * Dedicated "+" action: when provided, the "+" button opens this (e.g. a full
+   * create dialog) instead of the search popover, and the inline name-only
+   * "Create …" affordance is suppressed. Takes precedence over `onCreate`.
+   */
+  onAddClick?: () => void;
   placeholder?: string;
   searchPlaceholder?: string;
   /** Singular noun for the "Create …" affordance, e.g. "category". */
@@ -48,6 +54,7 @@ export function EntityCombobox({
   value,
   onChange,
   onCreate,
+  onAddClick,
   placeholder,
   searchPlaceholder,
   noun,
@@ -137,7 +144,7 @@ export function EntityCombobox({
                   </CommandItem>
                 ))}
               </CommandGroup>
-              {onCreate && q && !exactMatch && (
+              {onCreate && !onAddClick && q && !exactMatch && (
                 <>
                   <CommandSeparator />
                   <CommandGroup>
@@ -157,13 +164,13 @@ export function EntityCombobox({
         </PopoverContent>
       </Popover>
 
-      {onCreate && (
+      {(onAddClick || onCreate) && (
         <Button
           type="button"
           variant="outline"
           size="icon"
           disabled={disabled}
-          onClick={openForCreate}
+          onClick={onAddClick ?? openForCreate}
           title={t("inventory.form.addNoun", { noun: resolvedNoun })}
           aria-label={t("inventory.form.addNoun", { noun: resolvedNoun })}
         >

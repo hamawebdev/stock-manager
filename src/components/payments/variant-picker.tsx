@@ -13,6 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
 import { useProductVariants, useCurrency } from "@/lib/pos/queries";
+import { useCartStore } from "@/store/use-cart-store";
 import { formatMoney } from "@/lib/money";
 import { variantLabel } from "@/lib/pos/labels";
 import type { VariantDetail } from "@/lib/pos/types";
@@ -28,6 +29,10 @@ export function VariantPicker({ productId, productName, onPick, onClose }: Props
   const { t } = useTranslation();
   const currency = useCurrency();
   const variants = useProductVariants(productId);
+  // In return mode an out-of-stock variant is exactly what a customer is
+  // bringing back, so it must stay selectable (the refund restocks it). Selling
+  // an out-of-stock combination is still blocked.
+  const returnMode = useCartStore((s) => s.returnMode);
   const rows = (variants.data ?? []).filter((v) => v.archived === 0);
 
   return (
@@ -51,7 +56,7 @@ export function VariantPicker({ productId, productName, onPick, onClose }: Props
               return (
                 <button
                   key={v.id}
-                  disabled={out}
+                  disabled={out && !returnMode}
                   onClick={() => onPick(v)}
                   className="hover:bg-accent flex items-center justify-between rounded-md border px-3 py-2 text-start text-sm disabled:opacity-50"
                 >
