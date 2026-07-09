@@ -14,3 +14,14 @@ target = "x86_64-win7-windows-msvc"
 
 [unstable]
 build-std = ["std", "panic_abort"]
+
+# Statically link the entire C runtime. Rust's default MSVC linkage is static
+# vcruntime + *dynamic* UCRT (`ucrt.lib` → api-ms-win-crt-*.dll imports). The
+# UCRT ships inbox only on Windows 10+; stock Win7 SP1 lacks it (KB2999226 /
+# VC++ 2015+ redist territory), so the exe failed to load there with
+# "api-ms-win-crt-math-l1-1-0.dll is missing". With crt-static the UCRT is
+# linked in (the static UCRT supports downlevel Windows) and no api-ms-win-crt
+# imports remain. `cc`-compiled C deps (libsqlite3-sys) see the feature via
+# CARGO_CFG_TARGET_FEATURE and switch to /MT, so all objects agree on the CRT.
+[target.x86_64-win7-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]
