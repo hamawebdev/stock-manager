@@ -23,8 +23,10 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@master
         with:
-          # Pinned to the last Win7-capable Rust (matches src-tauri/rust-toolchain.toml).
-          toolchain: "1.77.2"
+          # Nightly + rust-src to build std from source for the Tier-3 Win7
+          # target (matches src-tauri/rust-toolchain.toml).
+          toolchain: "nightly-2025-12-01"
+          components: rust-src
 
       - uses: swatinem/rust-cache@v2
         with:
@@ -36,6 +38,9 @@ jobs:
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Compile std from source for the Tier-3 Win7 target (no prebuilt std).
+          # Requires the nightly toolchain + rust-src installed above.
+          CARGO_UNSTABLE_BUILD_STD: "std,panic_abort"
           # Uncomment after generating signing keys with `npm run tauri signer generate`
           # TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           # TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
@@ -45,3 +50,5 @@ jobs:
           releaseBody: "See the assets to download and install this version."
           releaseDraft: true
           prerelease: false
+          # Build for the Tier-3 Windows 7 target.
+          args: --target x86_64-win7-windows-msvc
