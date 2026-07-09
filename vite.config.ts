@@ -29,6 +29,13 @@ export default defineConfig(async () => ({
     ],
   },
 
+  // The app ships to Windows 7 via a pinned WebView2 v109 (Chromium 109) runtime,
+  // so cap the JS/CSS output at what Chromium 109 supports. Without this, esbuild
+  // may emit newer syntax that the frozen v109 engine can't parse.
+  build: {
+    target: "chrome109",
+  },
+
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
   // 1. prevent Vite from obscuring rust errors

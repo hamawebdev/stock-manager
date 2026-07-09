@@ -30,17 +30,20 @@ jobs:
 
       - name: Install Linux dependencies
         if: matrix.platform == 'ubuntu-22.04'
+        # Tauri v1 links against webkit2gtk-4.0 / libsoup2 (v2 used 4.1 / soup3).
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y libwebkit2gtk-4.0-dev libgtk-3-dev libappindicator3-dev librsvg2-dev patchelf
 
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@master
         with:
+          # Pinned to the last Win7-capable Rust (matches src-tauri/rust-toolchain.toml).
+          toolchain: "1.77.2"
           targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - uses: swatinem/rust-cache@v2
@@ -49,6 +52,40 @@ jobs:
 
       - name: Install frontend dependencies
         run: npm ci
+
+      - name: Prepare fixed-version WebView2 runtime (Windows 7 support)
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        # Downloads the pinned WebView2 v109 fixed runtime (the last build that
+        # runs on Windows 7) and extracts it into src-tauri/webview2-runtime/,
+        # matching `bundle.windows.webviewInstallMode.fixedRuntime.path` in
+        # tauri.conf.json. Set the download URL in a repo *variable*
+        # WEBVIEW2_FIXED_RUNTIME_URL (Settings → Secrets and variables → Actions →
+        # Variables), pointing at the x64 109.0.1518.x "Fixed Version" .cab from
+        # Microsoft's WebView2 download page. See src-tauri/webview2-runtime/README.md.
+        env:
+          WEBVIEW2_URL: ${{ vars.WEBVIEW2_FIXED_RUNTIME_URL }}
+        run: |
+          if (-not $env:WEBVIEW2_URL) {
+            Write-Error "WEBVIEW2_FIXED_RUNTIME_URL variable is not set. See src-tauri/webview2-runtime/README.md."
+            exit 1
+          }
+          $dest = "src-tauri/webview2-runtime"
+          New-Item -ItemType Directory -Force -Path $dest | Out-Null
+          Invoke-WebRequest -Uri $env:WEBVIEW2_URL -OutFile webview2.cab
+          # Extract the .cab, then flatten so msedgewebview2.exe sits directly in $dest.
+          expand webview2.cab -F:* $dest | Out-Null
+          $inner = Get-ChildItem -Path $dest -Directory |
+            Where-Object { Test-Path (Join-Path $_.FullName 'msedgewebview2.exe') } |
+            Select-Object -First 1
+          if ($inner) {
+            Move-Item -Path (Join-Path $inner.FullName '*') -Destination $dest -Force
+            Remove-Item -Path $inner.FullName -Recurse -Force
+          }
+          if (-not (Test-Path (Join-Path $dest 'msedgewebview2.exe'))) {
+            Write-Error "WebView2 runtime not found after extraction; check the archive layout."
+            exit 1
+          }
 
       - uses: tauri-apps/tauri-action@v0
         env:

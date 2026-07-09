@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
-import { commands } from "@/lib/bindings";
+import { invoke } from "@tauri-apps/api/tauri";
 import { addItem, deleteItem, listItems } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,7 +55,7 @@ export default function HomePage() {
             className="flex gap-2"
             onSubmit={async (e) => {
               e.preventDefault();
-              setGreeting(await commands.greet(name));
+              setGreeting(await invoke<string>("greet", { name }));
             }}
           >
             <Input
@@ -73,7 +73,7 @@ export default function HomePage() {
         <CardHeader>
           <CardTitle>Items (SQLite)</CardTitle>
           <CardDescription>
-            Persisted with <code>@tauri-apps/plugin-sql</code>.
+            Persisted with <code>tauri-plugin-sql-api</code>.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">

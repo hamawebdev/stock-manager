@@ -9,9 +9,9 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Database, Download, Upload } from "lucide-react";
-import { invoke } from "@tauri-apps/api/core";
-import { save, open, confirm } from "@tauri-apps/plugin-dialog";
-import { relaunch } from "@tauri-apps/plugin-process";
+import { invoke } from "@tauri-apps/api/tauri";
+import { save, open, confirm } from "@tauri-apps/api/dialog";
+import { relaunch } from "@tauri-apps/api/process";
 import { toast } from "sonner";
 
 /** Local backup/restore of the SQLite database via Rust file-copy commands. */

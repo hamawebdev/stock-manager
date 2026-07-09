@@ -4,6 +4,9 @@ version = "0.1.0"
 description = "A Tauri App"
 authors = ["you"]
 edition = "2021"
+# Kept in sync with rust-toolchain.toml. 1.77 is the last Rust whose standard
+# windows-msvc target still runs on Windows 7 (see rust-toolchain.toml).
+rust-version = "1.77"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -15,32 +18,45 @@ name = "stock_manager_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
-tauri-build = { version = "2", features = [] }
+tauri-build = { version = "1", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = ["protocol-asset"] }
-tauri-plugin-opener = "2"
+# Tauri v1 — the last Tauri line that supports Windows 7 SP1. v2 requires
+# Windows 10 (1803+). The allowlist features below replace the standalone v2
+# plugins (dialog/fs/os/process/shell/updater are core in v1).
+tauri = { version = "1", features = [
+    "protocol-asset",
+    "dialog-save",
+    "dialog-open",
+    "dialog-confirm",
+    "fs-all",
+    "os-all",
+    "process-relaunch",
+    "process-exit",
+    "shell-open",
+    "updater",
+] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-tauri-plugin-store = "2.4.3"
-tauri-plugin-sql = { version = "2.4.0", features = ["sqlite"] }
+thiserror = "1"
+
+# v1 plugins (git `v1` branch — these were not all published to crates.io for v1).
+tauri-plugin-sql = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "v1", features = [
+    "sqlite",
+] }
+
 # Used only to swap tauri-plugin-sql's default connection pool for a
-# single-connection one (see `db_use_single_connection`). Version/features must
-# match what tauri-plugin-sql pulls in so the `Pool<Sqlite>` types unify.
-sqlx = { version = "0.8", features = ["sqlite", "runtime-tokio"] }
-tauri-plugin-dialog = "2.7.1"
-tauri-plugin-fs = "2.5.1"
-tauri-plugin-notification = "2.3.3"
-tauri-plugin-log = "2.8.0"
-tauri-plugin-os = "2.3.2"
-thiserror = "2.0.18"
-specta = { version = "=2.0.0-rc.22", features = ["derive"] }
-specta-typescript = "=0.0.9"
-tauri-specta = { version = "=2.0.0-rc.21", features = ["derive", "typescript"] }
+# single-connection one (see `db_use_single_connection`). Version/features MUST
+# match what the v1 tauri-plugin-sql pulls in so the `Pool<Sqlite>` types unify.
+# The v1 SQL plugin uses sqlx 0.7 with the tokio runtime. If CI reports a type
+# mismatch here, align this version with the plugin's actual sqlx dependency.
+sqlx = { version = "0.7", features = ["sqlite", "runtime-tokio"] }
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
-tauri-plugin-process = "2.3.1"
-tauri-plugin-single-instance = "2.4.2"
-tauri-plugin-updater = "2.10.1"
-tauri-plugin-window-state = "2.4.1"
+tauri-plugin-single-instance = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "v1" }
+tauri-plugin-window-state = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "v1" }
 
+[features]
+# Enabled by `tauri build` (and when the frontend is served from the bundle).
+# DO NOT REMOVE — production builds fail without it.
+custom-protocol = ["tauri/custom-protocol"]

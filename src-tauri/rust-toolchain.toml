@@ -1,0 +1,8 @@
+# Pinned to the last Rust release whose standard `*-windows-msvc` target still
+# supports Windows 7. Rust 1.78 raised the minimum OS for that target to Windows
+# 10, so anything newer produces binaries that won't launch on Win7 SP1.
+# Do not bump this without a replacement Win7 strategy (see the win7 tier-3
+# target fallback in the Win7-compat plan).
+[toolchain]
+channel = "1.77.2"
+components = ["clippy", "rustfmt"]

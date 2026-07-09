@@ -1,4 +1,5 @@
-import { platform, version } from "@tauri-apps/plugin-os";
+import { useEffect, useState } from "react";
+import { platform, version } from "@tauri-apps/api/os";
 import { useTranslation } from "react-i18next";
 import { useAppStore } from "@/store/use-app-store";
 import { SUPPORTED_LANGUAGES, LANGUAGE_NAMES } from "@/lib/i18n";
@@ -25,8 +26,22 @@ export default function SettingsPage() {
   const setTheme = useAppStore((s) => s.setTheme);
   const language = useAppStore((s) => s.language);
   const setLanguage = useAppStore((s) => s.setLanguage);
-  // plugin-os exposes platform()/version() synchronously under Tauri.
-  const osInfo = `${platform()} ${version()}`;
+  // Tauri v1's os API is async (v2's plugin-os was sync), so resolve
+  // platform/version after mount instead of inline during render.
+  const [osInfo, setOsInfo] = useState("");
+  useEffect(() => {
+    let active = true;
+    Promise.all([platform(), version()])
+      .then(([p, v]) => {
+        if (active) setOsInfo(`${p} ${v}`);
+      })
+      .catch(() => {
+        if (active) setOsInfo("");
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6 p-6">

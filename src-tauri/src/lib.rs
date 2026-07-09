@@ -1,9 +1,8 @@
 use tauri_plugin_sql::{Migration, MigrationKind};
-use tauri_specta::{collect_commands, Builder};
 
 /// A serializable error type for fallible Tauri commands.
-/// The frontend receives the `message` string (and a typed shape via tauri-specta).
-#[derive(Debug, thiserror::Error, serde::Serialize, specta::Type)]
+/// The frontend receives the `message` string.
+#[derive(Debug, thiserror::Error, serde::Serialize)]
 #[error("{message}")]
 pub struct CommandError {
     pub message: String,
@@ -17,16 +16,14 @@ impl CommandError {
     }
 }
 
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
+// Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
-#[specta::specta]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
 }
 
 /// Example of a fallible command with a typed error.
 #[tauri::command]
-#[specta::specta]
 fn safe_divide(a: f64, b: f64) -> Result<f64, CommandError> {
     if b == 0.0 {
         return Err(CommandError::new("cannot divide by zero"));
@@ -41,7 +38,6 @@ fn safe_divide(a: f64, b: f64) -> Result<f64, CommandError> {
 /// - `transport = "network"` → open a TCP socket to `address` ("ip:port",
 ///   port 9100 for most network thermal printers) and write the bytes.
 #[tauri::command]
-#[specta::specta]
 fn print_raw(transport: String, address: String, data: Vec<u8>) -> Result<(), CommandError> {
     use std::io::Write;
     match transport.as_str() {
@@ -70,7 +66,6 @@ fn print_raw(transport: String, address: String, data: Vec<u8>) -> Result<(), Co
 /// build the file in the frontend and save it to a location picked via the
 /// dialog plugin). Mirrors the `print_raw` transport pattern.
 #[tauri::command]
-#[specta::specta]
 fn write_bytes(path: String, data: Vec<u8>) -> Result<(), CommandError> {
     std::fs::write(&path, &data)
         .map_err(|e| CommandError::new(format!("write {path}: {e}")))?;
@@ -80,17 +75,15 @@ fn write_bytes(path: String, data: Vec<u8>) -> Result<(), CommandError> {
 /// Resolve the path of the bundled SQLite database (`sqlite:app.db`), which
 /// tauri-plugin-sql stores in the app config directory.
 fn db_path(app: &tauri::AppHandle) -> Result<std::path::PathBuf, CommandError> {
-    use tauri::Manager;
     let dir = app
-        .path()
+        .path_resolver()
         .app_config_dir()
-        .map_err(|e| CommandError::new(format!("app config dir: {e}")))?;
+        .ok_or_else(|| CommandError::new("could not resolve app config dir"))?;
     Ok(dir.join("app.db"))
 }
 
 /// Copy the live database to a user-chosen file (local backup).
 #[tauri::command]
-#[specta::specta]
 fn db_backup(app: tauri::AppHandle, dest: String) -> Result<(), CommandError> {
     let src = db_path(&app)?;
     std::fs::copy(&src, &dest)
@@ -101,7 +94,6 @@ fn db_backup(app: tauri::AppHandle, dest: String) -> Result<(), CommandError> {
 /// Overwrite the live database with a backup file. The app must be restarted
 /// afterwards so the SQL plugin reopens the restored file.
 #[tauri::command]
-#[specta::specta]
 fn db_restore(app: tauri::AppHandle, src: String) -> Result<(), CommandError> {
     let dest = db_path(&app)?;
     std::fs::copy(&src, &dest)
@@ -125,8 +117,11 @@ fn db_restore(app: tauri::AppHandle, src: String) -> Result<(), CommandError> {
 /// already created its pool and run migrations on it; this swaps in the pinned
 /// pool afterwards (the previous pool is dropped). Connection reaping is disabled
 /// so the single connection is never replaced mid-transaction.
+///
+/// Note (v1): the v1 SQL plugin stores instances as
+/// `DbInstances(Mutex<HashMap<String, Pool<Sqlite>>>)` — a plain `Pool`, not a
+/// `DbPool` enum, behind a tokio `Mutex` — hence `.lock()` and a bare `pool`.
 #[tauri::command]
-#[specta::specta]
 async fn db_use_single_connection(
     app: tauri::AppHandle,
     db_instances: tauri::State<'_, tauri_plugin_sql::DbInstances>,
@@ -152,25 +147,12 @@ async fn db_use_single_connection(
 
     // Swap the pinned pool in under the same key the frontend uses
     // (`sqlite:app.db`); dropping the returned value releases the old pool.
-    db_instances.0.write().await.insert(
-        "sqlite:app.db".to_string(),
-        tauri_plugin_sql::DbPool::Sqlite(pool),
-    );
+    db_instances
+        .0
+        .lock()
+        .await
+        .insert("sqlite:app.db".to_string(), pool);
     Ok(())
-}
-
-/// Build the tauri-specta command registry. Shared by `run()` and the
-/// `export_bindings` test so generated TypeScript always matches the app.
-fn specta_builder() -> Builder {
-    Builder::<tauri::Wry>::new().commands(collect_commands![
-        greet,
-        safe_divide,
-        print_raw,
-        write_bytes,
-        db_backup,
-        db_restore,
-        db_use_single_connection
-    ])
 }
 
 /// SQLite migrations applied to `sqlite:app.db` on startup.
@@ -246,73 +228,31 @@ fn migrations() -> Vec<Migration> {
     ]
 }
 
-/// Writes the typed TypeScript client to `src/lib/bindings.ts`.
-/// Only compiled in debug builds; the `@ts-nocheck` header keeps the
-/// generated file out of the project's lint/type-check.
-#[cfg(debug_assertions)]
-fn export_bindings(builder: &Builder) {
-    builder
-        .export(
-            specta_typescript::Typescript::default()
-                .header("// @ts-nocheck\n/* eslint-disable */\n"),
-            "../src/lib/bindings.ts",
-        )
-        .expect("failed to export typescript bindings");
-}
-
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let builder = specta_builder();
+    use tauri::Manager;
 
-    // Regenerate TypeScript bindings on every dev build.
-    #[cfg(debug_assertions)]
-    export_bindings(&builder);
-
-    let mut app = tauri::Builder::default();
-
-    // Desktop-only plugins. `single_instance` must be registered first.
-    #[cfg(desktop)]
-    {
-        use tauri::Manager;
-        app = app
-            .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-                if let Some(window) = app.get_webview_window("main") {
-                    let _ = window.set_focus();
-                }
-            }))
-            .plugin(tauri_plugin_window_state::Builder::default().build())
-            .plugin(tauri_plugin_updater::Builder::new().build())
-            .plugin(tauri_plugin_process::init());
-    }
-
-    app.plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_fs::init())
-        .plugin(tauri_plugin_os::init())
-        .plugin(tauri_plugin_notification::init())
-        .plugin(tauri_plugin_store::Builder::default().build())
-        .plugin(tauri_plugin_log::Builder::new().build())
+    tauri::Builder::default()
+        // `single_instance` must be registered first.
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            if let Some(window) = app.get_window("main") {
+                let _ = window.set_focus();
+            }
+        }))
+        .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(
             tauri_plugin_sql::Builder::default()
                 .add_migrations("sqlite:app.db", migrations())
                 .build(),
         )
-        .invoke_handler(builder.invoke_handler())
-        .setup(move |app| {
-            builder.mount_events(app);
-            Ok(())
-        })
+        .invoke_handler(tauri::generate_handler![
+            greet,
+            safe_divide,
+            print_raw,
+            write_bytes,
+            db_backup,
+            db_restore,
+            db_use_single_connection
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    /// Generates `src/lib/bindings.ts`. Run with `cargo test export_bindings`.
-    #[test]
-    fn export_bindings() {
-        super::export_bindings(&specta_builder());
-    }
 }
