@@ -74,6 +74,7 @@
         "icons/icon.icns",
         "icons/icon.ico"
       ],
+      "resources": ["WebView2Loader.dll"],
       "windows": {
         "webviewInstallMode": {
           "type": "skip"

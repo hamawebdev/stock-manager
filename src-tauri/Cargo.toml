@@ -68,3 +68,11 @@ tauri-plugin-window-state = { git = "https://github.com/tauri-apps/plugins-works
 # Enabled by `tauri build` (and when the frontend is served from the bundle).
 # DO NOT REMOVE — production builds fail without it.
 custom-protocol = ["tauri/custom-protocol"]
+
+# The stock webview2-com-sys statically links WebView2LoaderStatic.lib, whose
+# telemetry imports EventSetInformation (advapi32) — absent on stock Win7 SP1,
+# so the exe died at load time. The vendored copy links the dynamic
+# WebView2Loader.dll instead; the DLL ships next to the exe via
+# `tauri.bundle.resources` (see vendored/webview2-com-sys/README.md).
+[patch.crates-io]
+webview2-com-sys = { path = "vendored/webview2-com-sys" }
