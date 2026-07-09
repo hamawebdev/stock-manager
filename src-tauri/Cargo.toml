@@ -63,6 +63,9 @@ sqlx = { version = "0.8", features = ["sqlite", "runtime-tokio"] }
 idna_adapter = "=1.1.0"
 # `base64ct` >= 1.7 requires edition2024; pulled via the rsa/pkcs stack.
 base64ct = "=1.6.0"
+# `indexmap` >= 2.14 requires edition2024; pin to the last edition-2021 line
+# (also keeps its `hashbrown` dep on the edition-2021 0.15 line).
+indexmap = "=2.7.1"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-single-instance = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "v1" }
