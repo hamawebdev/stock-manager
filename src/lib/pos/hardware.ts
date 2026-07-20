@@ -5,7 +5,7 @@
  *   - os                           → render HTML and use the system print dialog
  *   - disabled                     → no-op
  */
-import { invoke } from "@tauri-apps/api/tauri";
+import { invoke } from "@tauri-apps/api/core";
 import type { jsPDF } from "jspdf";
 import { getDb } from "./db";
 import { EscPosBuilder } from "./escpos";
@@ -269,7 +269,7 @@ async function saveLabelPdf(doc: jsPDF): Promise<void> {
   const bytes = new Uint8Array(doc.output("arraybuffer"));
   const name = `labels-${Date.now()}.pdf`;
   if (isTauri()) {
-    const { save } = await import("@tauri-apps/api/dialog");
+    const { save } = await import("@tauri-apps/plugin-dialog");
     const path = await save({
       defaultPath: name,
       filters: [{ name: "PDF", extensions: ["pdf"] }],

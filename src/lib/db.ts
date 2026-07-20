@@ -1,5 +1,5 @@
-import Database from "tauri-plugin-sql-api";
-import { invoke } from "@tauri-apps/api/tauri";
+import Database from "@tauri-apps/plugin-sql";
+import { invoke } from "@tauri-apps/api/core";
 
 /** Narrow view of the plugin-sql handle: only the methods the app uses. */
 export type Db = Pick<Database, "execute" | "select">;

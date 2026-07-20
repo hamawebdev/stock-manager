@@ -9,7 +9,7 @@
  * may be settled in full or on credit (paid_cents < total_ttc); a credit sale
  * requires a named customer (walk-ins must pay in full).
  */
-import type Database from "tauri-plugin-sql-api";
+import type Database from "@tauri-apps/plugin-sql";
 import { getDb, withTx } from "./db";
 import { applyMovement } from "./inventory";
 import { getSetting } from "./settings";

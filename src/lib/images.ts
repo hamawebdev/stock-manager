@@ -13,7 +13,7 @@ import type { ProductImage } from "./pos/types";
 const ROOT = "product-images"; // relative to the app-config base dir
 
 async function fs() {
-  return import("@tauri-apps/api/fs");
+  return import("@tauri-apps/plugin-fs");
 }
 async function pathApi() {
   return import("@tauri-apps/api/path");
@@ -37,7 +37,7 @@ export async function listProductImages(
 
 /** Resolve a stored relative path to an <img>-loadable asset URL. */
 export async function productImageSrc(relPath: string): Promise<string> {
-  const { convertFileSrc } = await import("@tauri-apps/api/tauri");
+  const { convertFileSrc } = await import("@tauri-apps/api/core");
   const { appConfigDir, join } = await pathApi();
   const abs = await join(await appConfigDir(), ROOT, relPath);
   return convertFileSrc(abs);
@@ -54,16 +54,16 @@ export async function saveProductImage(
   fileName: string,
   opts: { isPrimary?: boolean; sortOrder?: number } = {},
 ): Promise<ProductImage> {
-  const { createDir, writeBinaryFile, BaseDirectory } = await fs();
+  const { mkdir, writeFile, BaseDirectory } = await fs();
   const { join } = await pathApi();
 
   const dir = await join(ROOT, String(productId));
-  await createDir(dir, { dir: BaseDirectory.AppConfig, recursive: true });
+  await mkdir(dir, { baseDir: BaseDirectory.AppConfig, recursive: true });
 
   const ext = extFromName(fileName);
   const rel = await join(String(productId), `${crypto.randomUUID()}.${ext}`);
-  await writeBinaryFile(await join(ROOT, rel), bytes, {
-    dir: BaseDirectory.AppConfig,
+  await writeFile(await join(ROOT, rel), bytes, {
+    baseDir: BaseDirectory.AppConfig,
   });
 
   const db = await getDb();
@@ -99,10 +99,10 @@ export async function deleteProductImage(id: number): Promise<void> {
   );
   if (!row) return;
   try {
-    const { removeFile, BaseDirectory } = await fs();
+    const { remove, BaseDirectory } = await fs();
     const { join } = await pathApi();
-    await removeFile(await join(ROOT, row.path), {
-      dir: BaseDirectory.AppConfig,
+    await remove(await join(ROOT, row.path), {
+      baseDir: BaseDirectory.AppConfig,
     });
   } catch {
     // File may already be gone; the DB row removal below is what matters.

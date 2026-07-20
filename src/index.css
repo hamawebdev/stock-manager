@@ -8,78 +8,71 @@
   Anchored on a comfortable, desaturated blue with faintly cool-tinted neutrals.
   No pure #000 / #fff on large surfaces; WCAG-AA text contrast; low eye fatigue.
   Every UI color flows from the semantic tokens below — recolor here, not in JSX.
-
-  BROWSER FLOOR: WebView2 v109 (Chromium 109, last Windows 7 build). Chrome
-  111+ color syntax — oklch()/oklab(), color-mix(), light-dark() — does NOT
-  parse there; unparseable var() values silently render the whole UI
-  black-and-white. All color values in this file must stay plain sRGB
-  (hex / rgb() / hsl()). Tailwind's own color-mix() opacity modifiers are safe:
-  the build wraps them in @supports guards with full-opacity fallbacks.
 */
 
 :root {
   --radius: 0.625rem;
 
   /* ---- Surfaces & text ---- */
-  --background: #f2f5f7; /* soft cool off-white canvas */
-  --foreground: #1f2732; /* deep slate — not pure black */
-  --surface: #f7f9fb; /* slightly tinted panel */
-  --card: #fcfeff; /* near-white lifted surface */
-  --card-foreground: #1f2732;
-  --popover: #fcfeff;
-  --popover-foreground: #1f2732;
+  --background: oklch(0.968 0.004 247); /* soft cool off-white canvas */
+  --foreground: oklch(0.27 0.024 257); /* deep slate — not pure black */
+  --surface: oklch(0.982 0.003 247); /* slightly tinted panel */
+  --card: oklch(0.995 0.002 247); /* near-white lifted surface */
+  --card-foreground: oklch(0.27 0.024 257);
+  --popover: oklch(0.995 0.002 247);
+  --popover-foreground: oklch(0.27 0.024 257);
 
   /* ---- Primary (comfortable enterprise blue) ---- */
-  --primary: #1c6fd2;
-  --primary-foreground: #f7fafd;
-  --primary-hover: #0160c1;
-  --primary-active: #0052a8;
-  --primary-soft: #e2eeff; /* tinted pill background */
-  --primary-soft-foreground: #1059ac;
+  --primary: oklch(0.55 0.17 256);
+  --primary-foreground: oklch(0.985 0.005 247);
+  --primary-hover: oklch(0.5 0.17 256);
+  --primary-active: oklch(0.45 0.16 256);
+  --primary-soft: oklch(0.945 0.035 256); /* tinted pill background */
+  --primary-soft-foreground: oklch(0.47 0.15 256);
 
   /* ---- Secondary / neutral grays ---- */
-  --secondary: #ecf1f5;
-  --secondary-foreground: #343b45;
-  --muted: #edf1f4;
-  --muted-foreground: #5c646f;
-  --accent: #e6f0fb; /* faint blue hover tint */
-  --accent-foreground: #2e415a;
+  --secondary: oklch(0.955 0.008 247);
+  --secondary-foreground: oklch(0.35 0.02 257);
+  --muted: oklch(0.955 0.006 247);
+  --muted-foreground: oklch(0.5 0.02 257);
+  --accent: oklch(0.95 0.018 252); /* faint blue hover tint */
+  --accent-foreground: oklch(0.37 0.05 257);
 
   /* ---- Status: destructive / success / warning / info ---- */
-  --destructive: #d93632;
-  --destructive-foreground: #f9fcff;
-  --destructive-soft: #ffe6e4;
-  --destructive-soft-foreground: #b32e2a;
+  --destructive: oklch(0.585 0.2 27);
+  --destructive-foreground: oklch(0.99 0.005 247);
+  --destructive-soft: oklch(0.945 0.035 25);
+  --destructive-soft-foreground: oklch(0.51 0.17 27);
 
-  --success: #00773b;
-  --success-foreground: #f7fef8;
-  --success-soft: #d3f5db;
-  --success-soft-foreground: #0d6332;
+  --success: oklch(0.5 0.15 152);
+  --success-foreground: oklch(0.99 0.01 150);
+  --success-soft: oklch(0.94 0.05 152);
+  --success-soft-foreground: oklch(0.44 0.11 152);
 
-  --warning: #dd9314;
-  --warning-foreground: #382409;
-  --warning-soft: #ffe8c5;
-  --warning-soft-foreground: #915100;
+  --warning: oklch(0.72 0.15 72);
+  --warning-foreground: oklch(0.28 0.05 72);
+  --warning-soft: oklch(0.94 0.06 78);
+  --warning-soft-foreground: oklch(0.5 0.12 62);
 
-  --info: #0079a3;
-  --info-foreground: #f8fdff;
-  --info-soft: #d5f0ff;
-  --info-soft-foreground: #005e8c;
+  --info: oklch(0.54 0.13 232);
+  --info-foreground: oklch(0.99 0.01 232);
+  --info-soft: oklch(0.94 0.045 232);
+  --info-soft-foreground: oklch(0.46 0.11 240);
 
   /* ---- Borders & rings ---- */
-  --border: #dce0e5;
-  --input: #d8dde2;
-  --ring: #1c6fd2; /* blue focus ring */
+  --border: oklch(0.905 0.008 247);
+  --input: oklch(0.895 0.009 247);
+  --ring: oklch(0.55 0.17 256); /* blue focus ring */
 
   /* ---- Sidebar ---- */
-  --sidebar: #f4f7fa;
-  --sidebar-foreground: #343b45;
-  --sidebar-primary: #1c6fd2;
-  --sidebar-primary-foreground: #f7fafd;
-  --sidebar-accent: #e1edfa;
-  --sidebar-accent-foreground: #2e486d;
-  --sidebar-border: #dadfe3;
-  --sidebar-ring: #1c6fd2;
+  --sidebar: oklch(0.976 0.005 247);
+  --sidebar-foreground: oklch(0.35 0.02 257);
+  --sidebar-primary: oklch(0.55 0.17 256);
+  --sidebar-primary-foreground: oklch(0.985 0.005 247);
+  --sidebar-accent: oklch(0.94 0.022 252);
+  --sidebar-accent-foreground: oklch(0.4 0.07 257);
+  --sidebar-border: oklch(0.9 0.008 247);
+  --sidebar-ring: oklch(0.55 0.17 256);
 
   /* ---- Soft shadows ---- */
   --shadow-color: 220 40% 30%;
@@ -94,65 +87,65 @@
 
 .dark {
   /* ---- Surfaces & text ---- */
-  --background: #111720; /* deep slate — not pure black */
-  --foreground: #edf1f4;
-  --surface: #181f28;
-  --card: #1b222b;
-  --card-foreground: #edf1f4;
-  --popover: #1b222b;
-  --popover-foreground: #edf1f4;
+  --background: oklch(0.205 0.02 258); /* deep slate — not pure black */
+  --foreground: oklch(0.955 0.006 247);
+  --surface: oklch(0.235 0.02 257);
+  --card: oklch(0.248 0.02 257);
+  --card-foreground: oklch(0.955 0.006 247);
+  --popover: oklch(0.248 0.02 257);
+  --popover-foreground: oklch(0.955 0.006 247);
 
   /* ---- Primary ---- */
-  --primary: #1c6fd2;
-  --primary-foreground: #f9fcff;
-  --primary-hover: #3282e6;
-  --primary-active: #4992f2;
-  --primary-soft: #1d3351;
-  --primary-soft-foreground: #9dc7ff;
+  --primary: oklch(0.55 0.17 256);
+  --primary-foreground: oklch(0.99 0.008 247);
+  --primary-hover: oklch(0.61 0.17 256);
+  --primary-active: oklch(0.66 0.16 256);
+  --primary-soft: oklch(0.32 0.06 256);
+  --primary-soft-foreground: oklch(0.82 0.11 256);
 
   /* ---- Secondary / neutral grays ---- */
-  --secondary: #252c35;
-  --secondary-foreground: #ebeff2;
-  --muted: #272c33;
-  --muted-foreground: #9aa2ae;
-  --accent: #2b3645;
-  --accent-foreground: #edf3f8;
+  --secondary: oklch(0.29 0.02 257);
+  --secondary-foreground: oklch(0.95 0.006 247);
+  --muted: oklch(0.29 0.015 257);
+  --muted-foreground: oklch(0.71 0.02 257);
+  --accent: oklch(0.33 0.03 256);
+  --accent-foreground: oklch(0.96 0.01 247);
 
   /* ---- Status ---- */
-  --destructive: #e54c4a;
-  --destructive-foreground: #f9fcff;
-  --destructive-soft: #442321;
-  --destructive-soft-foreground: #ffaba3;
+  --destructive: oklch(0.63 0.19 25);
+  --destructive-foreground: oklch(0.99 0.005 247);
+  --destructive-soft: oklch(0.3 0.05 25);
+  --destructive-soft-foreground: oklch(0.82 0.13 25);
 
-  --success: #3da763;
-  --success-foreground: #041107;
-  --success-soft: #193521;
-  --success-soft-foreground: #82e09d;
+  --success: oklch(0.65 0.14 152);
+  --success-foreground: oklch(0.16 0.03 152);
+  --success-soft: oklch(0.3 0.05 152);
+  --success-soft-foreground: oklch(0.83 0.13 152);
 
-  --warning: #dea132;
-  --warning-foreground: #211301;
-  --warning-soft: #432e14;
-  --warning-soft-foreground: #f5c66d;
+  --warning: oklch(0.75 0.14 78);
+  --warning-foreground: oklch(0.2 0.04 72);
+  --warning-soft: oklch(0.32 0.05 72);
+  --warning-soft-foreground: oklch(0.85 0.12 82);
 
-  --info: #2f9ecf;
-  --info-foreground: #010f18;
-  --info-soft: #0e3243;
-  --info-soft-foreground: #7ed3ff;
+  --info: oklch(0.66 0.12 232);
+  --info-foreground: oklch(0.16 0.03 232);
+  --info-soft: oklch(0.3 0.05 232);
+  --info-soft-foreground: oklch(0.83 0.11 232);
 
   /* ---- Borders & rings ---- */
-  --border: #ffffff1a;
-  --input: #ffffff26;
-  --ring: #1c6fd2;
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.55 0.17 256);
 
   /* ---- Sidebar ---- */
-  --sidebar: #181e28;
-  --sidebar-foreground: #dbdee2;
-  --sidebar-primary: #1c6fd2;
-  --sidebar-primary-foreground: #f9fcff;
-  --sidebar-accent: #293442;
-  --sidebar-accent-foreground: #e9eff5;
-  --sidebar-border: #ffffff14;
-  --sidebar-ring: #1c6fd2;
+  --sidebar: oklch(0.235 0.02 258);
+  --sidebar-foreground: oklch(0.9 0.006 247);
+  --sidebar-primary: oklch(0.55 0.17 256);
+  --sidebar-primary-foreground: oklch(0.99 0.008 247);
+  --sidebar-accent: oklch(0.32 0.03 256);
+  --sidebar-accent-foreground: oklch(0.95 0.01 247);
+  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-ring: oklch(0.55 0.17 256);
 
   /* ---- Soft shadows (deeper for dark) ---- */
   --shadow-color: 220 60% 4%;
@@ -237,39 +230,6 @@
   --shadow-sm: var(--shadow-sm);
   --shadow-md: var(--shadow-md);
   --shadow-lg: var(--shadow-lg);
-}
-
-/*
-  Tailwind v4 defines its default palette in oklch(), which WebView2 v109
-  cannot parse (see BROWSER FLOOR above). Every default-palette shade used by
-  the app (Badge soft-* variants, charts) is re-declared here as its sRGB
-  equivalent so the generated `--color-*` variables stay Win7-parseable.
-  If a class references a NEW palette shade, add its sRGB override here —
-  or better, use the semantic tokens instead of literal palette colors.
-*/
-@theme {
-  --color-amber-100: #fef3c6;
-  --color-amber-300: #ffd237;
-  --color-amber-700: #b55200;
-  --color-amber-950: #461901;
-  --color-blue-500: #3280ff;
-  --color-emerald-100: #d0fae5;
-  --color-emerald-300: #5ee9b5;
-  --color-emerald-700: #007857;
-  --color-emerald-950: #002c22;
-  --color-green-500: #00c65a;
-  --color-orange-500: #fc7100;
-  --color-purple-500: #ab4eff;
-  --color-red-100: #ffe2e2;
-  --color-red-300: #ffa3a4;
-  --color-red-700: #bf000f;
-  --color-red-950: #460809;
-  --color-rose-500: #ff2357;
-  --color-rose-600: #e60045;
-  --color-violet-100: #ede9fe;
-  --color-violet-300: #c4b4ff;
-  --color-violet-700: #7008e7;
-  --color-violet-950: #2f0d68;
 }
 
 @layer base {

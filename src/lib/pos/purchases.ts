@@ -6,7 +6,7 @@
  * average. TVA is per-purchase. Money is INTEGER minor units; qty is REAL so
  * weight/volume units (Kg, L) can be received with decimals.
  */
-import type Database from "tauri-plugin-sql-api";
+import type Database from "@tauri-apps/plugin-sql";
 import { getDb, withTx } from "./db";
 import { applyMovement } from "./inventory";
 import type {

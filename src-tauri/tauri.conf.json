@@ -1,59 +1,15 @@
 {
-  "$schema": "../node_modules/@tauri-apps/cli/schema.json",
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Stock Manager",
+  "version": "0.1.0",
+  "identifier": "com.hamawebdev.stockmanager",
   "build": {
     "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1430",
     "beforeBuildCommand": "npm run build",
-    "devPath": "http://localhost:1430",
-    "distDir": "../dist"
+    "frontendDist": "../dist"
   },
-  "package": {
-    "productName": "Stock Manager",
-    "version": "0.1.0"
-  },
-  "tauri": {
-    "allowlist": {
-      "protocol": {
-        "asset": true,
-        "assetScope": [
-          "$APPCONFIG/product-images/**",
-          "$APPDATA/product-images/**",
-          "$APPCONFIG/expense-attachments/**",
-          "$APPDATA/expense-attachments/**",
-          "$APPCONFIG/shop-assets/**",
-          "$APPDATA/shop-assets/**"
-        ]
-      },
-      "dialog": {
-        "save": true,
-        "open": true,
-        "confirm": true
-      },
-      "fs": {
-        "all": true,
-        "scope": ["$APPCONFIG/**", "$APPDATA/**"]
-      },
-      "os": {
-        "all": true
-      },
-      "process": {
-        "relaunch": true,
-        "exit": true
-      },
-      "shell": {
-        "open": true
-      }
-    },
-    "security": {
-      "csp": null
-    },
-    "updater": {
-      "active": false,
-      "dialog": false,
-      "endpoints": [
-        "https://example.com/updates/{{target}}/{{arch}}/{{current_version}}"
-      ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDIzOTZEQzYyRkQxRDRFRTUKUldUbFRoMzlZdHlXSTBuZCtMbTFJOFIzU2pkUEJvR3FmUjM2TDdnZFdaNWRSM1dkOHdEek1YMEEK"
-    },
+  "app": {
     "windows": [
       {
         "title": "Stock Manager",
@@ -63,23 +19,34 @@
         "minHeight": 480
       }
     ],
-    "bundle": {
-      "active": true,
-      "identifier": "com.hamawebdev.stockmanager",
-      "targets": "all",
-      "icon": [
-        "icons/32x32.png",
-        "icons/128x128.png",
-        "icons/128x128@2x.png",
-        "icons/icon.icns",
-        "icons/icon.ico"
-      ],
-      "resources": ["WebView2Loader.dll"],
-      "windows": {
-        "webviewInstallMode": {
-          "type": "skip"
-        }
+    "security": {
+      "csp": null,
+      "assetProtocol": {
+        "enable": true,
+        "scope": [
+          "$APPCONFIG/product-images/**",
+          "$APPDATA/product-images/**"
+        ]
       }
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://example.com/updates/{{target}}/{{arch}}/{{current_version}}"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDIzOTZEQzYyRkQxRDRFRTUKUldUbFRoMzlZdHlXSTBuZCtMbTFJOFIzU2pkUEJvR3FmUjM2TDdnZFdaNWRSM1dkOHdEek1YMEEK"
     }
   }
 }

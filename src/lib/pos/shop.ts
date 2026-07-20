@@ -10,7 +10,7 @@ import { getSetting, setSetting } from "./settings";
 const ROOT = "shop-assets"; // relative to the app-config base dir
 
 async function fs() {
-  return import("@tauri-apps/api/fs");
+  return import("@tauri-apps/plugin-fs");
 }
 async function pathApi() {
   return import("@tauri-apps/api/path");
@@ -33,12 +33,12 @@ export async function saveShopLogo(
   bytes: Uint8Array,
   fileName: string,
 ): Promise<string> {
-  const { createDir, writeBinaryFile, BaseDirectory } = await fs();
+  const { mkdir, writeFile, BaseDirectory } = await fs();
   const { join } = await pathApi();
-  await createDir(ROOT, { dir: BaseDirectory.AppConfig, recursive: true });
+  await mkdir(ROOT, { baseDir: BaseDirectory.AppConfig, recursive: true });
   const rel = `logo-${crypto.randomUUID()}.${extFromName(fileName)}`;
-  await writeBinaryFile(await join(ROOT, rel), bytes, {
-    dir: BaseDirectory.AppConfig,
+  await writeFile(await join(ROOT, rel), bytes, {
+    baseDir: BaseDirectory.AppConfig,
   });
   await setSetting("shop_logo", rel);
   return rel;
@@ -47,7 +47,7 @@ export async function saveShopLogo(
 /** Resolve the stored logo to an <img>-loadable asset URL (for live UI). */
 export async function shopLogoSrc(relPath: string): Promise<string | null> {
   if (!relPath) return null;
-  const { convertFileSrc } = await import("@tauri-apps/api/tauri");
+  const { convertFileSrc } = await import("@tauri-apps/api/core");
   const { appConfigDir, join } = await pathApi();
   return convertFileSrc(await join(await appConfigDir(), ROOT, relPath));
 }
@@ -56,10 +56,10 @@ export async function shopLogoSrc(relPath: string): Promise<string | null> {
 export async function shopLogoDataUrl(relPath: string): Promise<string | null> {
   if (!relPath) return null;
   try {
-    const { readBinaryFile, BaseDirectory } = await fs();
+    const { readFile, BaseDirectory } = await fs();
     const { join } = await pathApi();
-    const bytes = await readBinaryFile(await join(ROOT, relPath), {
-      dir: BaseDirectory.AppConfig,
+    const bytes = await readFile(await join(ROOT, relPath), {
+      baseDir: BaseDirectory.AppConfig,
     });
     let binary = "";
     for (const b of bytes) binary += String.fromCharCode(b);
@@ -74,9 +74,9 @@ export async function removeShopLogo(): Promise<void> {
   const rel = await getSetting("shop_logo");
   if (rel) {
     try {
-      const { removeFile, BaseDirectory } = await fs();
+      const { remove, BaseDirectory } = await fs();
       const { join } = await pathApi();
-      await removeFile(await join(ROOT, rel), { dir: BaseDirectory.AppConfig });
+      await remove(await join(ROOT, rel), { baseDir: BaseDirectory.AppConfig });
     } catch {
       // File may already be gone; clearing the setting below is what matters.
     }

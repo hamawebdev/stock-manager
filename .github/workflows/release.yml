@@ -1,6 +1,6 @@
 name: Release
 
-# Build the Windows 7 x64 installer when a v* tag is pushed.
+# Build cross-platform installers when a v* tag is pushed.
 on:
   push:
     tags:
@@ -11,22 +11,37 @@ jobs:
   release:
     permissions:
       contents: write
-    # Windows 7 x64 is the only supported target, so build a single Windows job.
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: "macos-latest" # Apple Silicon
+            args: "--target aarch64-apple-darwin"
+          - platform: "macos-latest" # Intel
+            args: "--target x86_64-apple-darwin"
+          - platform: "ubuntu-22.04"
+            args: ""
+          - platform: "windows-latest"
+            args: ""
+
+    runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
 
-      - uses: dtolnay/rust-toolchain@master
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          # Nightly + rust-src to build std from source for the Tier-3 Win7
-          # target (matches src-tauri/rust-toolchain.toml).
-          toolchain: "nightly-2025-12-01"
-          components: rust-src
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - uses: swatinem/rust-cache@v2
         with:
@@ -38,9 +53,6 @@ jobs:
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # The Win7 Tier-3 target + build-std are configured in
-          # src-tauri/.cargo/config.toml (not via --target, which the tauri v1
-          # CLI would reject). Nothing target-related is passed here.
           # Uncomment after generating signing keys with `npm run tauri signer generate`
           # TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           # TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
@@ -50,3 +62,4 @@ jobs:
           releaseBody: "See the assets to download and install this version."
           releaseDraft: true
           prerelease: false
+          args: ${{ matrix.args }}

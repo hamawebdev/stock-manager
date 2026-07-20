@@ -1,4 +1,4 @@
-import type Database from "tauri-plugin-sql-api";
+import type Database from "@tauri-apps/plugin-sql";
 import { getRawDb, serialize } from "@/lib/db";
 
 export { getDb } from "@/lib/db";

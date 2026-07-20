@@ -17,7 +17,7 @@ import {
 const ROOT = "expense-attachments"; // relative to the app-config base dir
 
 async function fs() {
-  return import("@tauri-apps/api/fs");
+  return import("@tauri-apps/plugin-fs");
 }
 async function pathApi() {
   return import("@tauri-apps/api/path");
@@ -33,7 +33,7 @@ export type { ExpenseAttachment };
 
 /** Resolve a stored relative path to an openable asset URL (for preview). */
 export async function attachmentSrc(relPath: string): Promise<string> {
-  const { convertFileSrc } = await import("@tauri-apps/api/tauri");
+  const { convertFileSrc } = await import("@tauri-apps/api/core");
   const { appConfigDir, join } = await pathApi();
   const abs = await join(await appConfigDir(), ROOT, relPath);
   return convertFileSrc(abs);
@@ -52,16 +52,16 @@ export async function saveAttachment(
   fileName: string,
   mime: string | null = null,
 ): Promise<ExpenseAttachment> {
-  const { createDir, writeBinaryFile, BaseDirectory } = await fs();
+  const { mkdir, writeFile, BaseDirectory } = await fs();
   const { join } = await pathApi();
 
   const dir = await join(ROOT, String(expenseId));
-  await createDir(dir, { dir: BaseDirectory.AppConfig, recursive: true });
+  await mkdir(dir, { baseDir: BaseDirectory.AppConfig, recursive: true });
 
   const ext = extFromName(fileName);
   const rel = await join(String(expenseId), `${crypto.randomUUID()}.${ext}`);
-  await writeBinaryFile(await join(ROOT, rel), bytes, {
-    dir: BaseDirectory.AppConfig,
+  await writeFile(await join(ROOT, rel), bytes, {
+    baseDir: BaseDirectory.AppConfig,
   });
 
   return insertAttachment(expenseId, rel, fileName, mime, bytes.byteLength);
@@ -72,10 +72,10 @@ export async function deleteAttachment(
   attachment: ExpenseAttachment,
 ): Promise<void> {
   try {
-    const { removeFile, BaseDirectory } = await fs();
+    const { remove, BaseDirectory } = await fs();
     const { join } = await pathApi();
-    await removeFile(await join(ROOT, attachment.path), {
-      dir: BaseDirectory.AppConfig,
+    await remove(await join(ROOT, attachment.path), {
+      baseDir: BaseDirectory.AppConfig,
     });
   } catch {
     // File may already be gone; the DB row removal below is what matters.
@@ -88,10 +88,10 @@ export async function deleteAttachmentFiles(
   expenseId: number,
 ): Promise<void> {
   try {
-    const { removeDir, BaseDirectory } = await fs();
+    const { remove, BaseDirectory } = await fs();
     const { join } = await pathApi();
-    await removeDir(await join(ROOT, String(expenseId)), {
-      dir: BaseDirectory.AppConfig,
+    await remove(await join(ROOT, String(expenseId)), {
+      baseDir: BaseDirectory.AppConfig,
       recursive: true,
     });
   } catch {
@@ -163,6 +163,6 @@ export async function openAttachment(relPath: string): Promise<void> {
     window.open(await attachmentSrc(relPath), "_blank");
     return;
   }
-  const { open } = await import("@tauri-apps/api/shell");
-  await open(await attachmentAbsPath(relPath));
+  const { openPath } = await import("@tauri-apps/plugin-opener");
+  await openPath(await attachmentAbsPath(relPath));
 }

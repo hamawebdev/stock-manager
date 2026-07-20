@@ -17,8 +17,8 @@ function isTauri(): boolean {
 
 async function saveBytes(suggestedName: string, bytes: Uint8Array): Promise<void> {
   if (isTauri()) {
-    const { save } = await import("@tauri-apps/api/dialog");
-    const { invoke } = await import("@tauri-apps/api/tauri");
+    const { save } = await import("@tauri-apps/plugin-dialog");
+    const { invoke } = await import("@tauri-apps/api/core");
     const path = await save({ defaultPath: suggestedName });
     if (!path) return;
     await invoke("write_bytes", { path, data: Array.from(bytes) });
